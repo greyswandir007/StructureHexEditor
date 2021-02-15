@@ -33,10 +33,10 @@ SOURCES += \
     components/propertiesdialog.cpp \
     components/propertiesmodel.cpp \
     components/propertydelegate.cpp \
-    components/bbytearray.cpp \
     structureeditor.cpp \
     components/jsontreemodel.cpp \
-    components/jsonstoreddatahelper.cpp
+    components/jsonstoreddata.cpp \
+    components/structurebytearray.cpp
 
 HEADERS += \
         hexeditorwindow.h \
@@ -46,11 +46,10 @@ HEADERS += \
     components/propertiesdialog.h \
     components/propertiesmodel.h \
     components/propertydelegate.h \
-    components/bbytearray.h \
     structureeditor.h \
     components/jsontreemodel.h \
     components/jsonstoreddata.h \
-    components/jsonstoreddatahelper.h
+    components/structurebytearray.h
 
 FORMS += \
         hexeditorwindow.ui \

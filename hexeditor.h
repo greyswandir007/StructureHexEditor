@@ -7,7 +7,7 @@
 #include <QScrollBar>
 #include <QItemSelectionModel>
 
-#include <components/bbytearray.h>
+#include <components/structurebytearray.h>
 
 enum ResizeModes {
     HEX_RESIZE_MODE_DYNAMIC, HEX_RESIZE_MODE_POW_BY_TWO, HEX_RESIZE_MODE_FIXED
@@ -33,32 +33,32 @@ public:
     bool isImported();
     bool isExported();
 
-    BByteArray selectedData();
+    StructureByteArray selectedData();
 
     QScrollBar *getScrollbar();
     void saveFileAs(QString filename);
     void saveFile();
     QItemSelectionModel *selectionModel();
 
-    void copy(int copy_addr, BByteArray *copy_from, int start_idx, int length);
+    void copy(int copy_addr, StructureByteArray *copy_from, int start_idx, int length);
     void resizeEvent(QResizeEvent* event);
     void appendBinaryFile(QString filename, int offset);
 
     unsigned long getAddress (int row, int col);
     unsigned long getCurrentAddress ();
 
-    void setBinaryData(BByteArray binaryData);
-    BByteArray *getBinaryData();
-    void setCompareData(BByteArray *compareData);
-    BByteArray *getCompareData();
+    void setBinaryData(StructureByteArray binaryData);
+    StructureByteArray *getBinaryData();
+    void setCompareData(StructureByteArray *compareData);
+    StructureByteArray *getCompareData();
 
     int getColumnCount() const;
     void setColumnCount(int value);
     int getResizeMode() const;
     void setResizeMode(int value);
 
-    BByteArray getBinaryDataByIndex(const QModelIndex &index, int length);
-    BByteArray getBinaryDataByIndex(int offset, int length);
+    StructureByteArray getBinaryDataByIndex(const QModelIndex &index, int length);
+    StructureByteArray getBinaryDataByIndex(int offset, int length);
 
 signals:
 
@@ -73,8 +73,8 @@ private:
     HexItemDelegate *delegate;
     bool imported;
     bool exported;
-    BByteArray binaryData;
-    BByteArray *compareData;
+    StructureByteArray binaryData;
+    StructureByteArray *compareData;
     int columnCount;
     int resizeMode;
     QString filename;

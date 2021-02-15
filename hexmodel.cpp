@@ -106,7 +106,7 @@ QVariant HexModel::data(const QModelIndex &index, int role) const {
 
 void HexModel::updateData() {
     QModelIndex zero_index = createIndex(0, 0);
-    QModelIndex end_index = createIndex(this->rowCount(), 10);
+    QModelIndex end_index = createIndex(this->rowCount(), columnCount());
 
     emit layoutAboutToBeChanged();
     emit layoutChanged();

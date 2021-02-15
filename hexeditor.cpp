@@ -13,7 +13,7 @@
 
 #include <QtMath>
 
-#include <components/bbytearray.h>
+#include <components/structurebytearray.h>
 
 HexEditor::HexEditor(QWidget *parent) :
     QFrame(parent),
@@ -118,7 +118,7 @@ void HexEditor::loadFile(QString filename) {
         int l = filename.length();
         QString ext = filename.mid(l - 4, 4);
         if (ext.compare(".hex", Qt::CaseInsensitive) == 0) {
-            binaryData = BByteArray(HexManager::loadAsHex(filename, &imported));
+            binaryData = StructureByteArray(HexManager::loadAsHex(filename, &imported));
             if (imported) {
                 qDebug()  << "import of HEX succeeeful";
                 ui->fileName->setText(filename + " (" + tr("HEX import") + ")");
@@ -131,7 +131,7 @@ void HexEditor::loadFile(QString filename) {
     if (!imported) {
         QFile f(filename);
         if (f.open(QIODevice::ReadOnly)) {
-            binaryData = BByteArray(f.readAll());
+            binaryData = StructureByteArray(f.readAll());
             if (binaryData.size() > 0) {
                 model->updateData();
                 resizeTable();
@@ -186,18 +186,18 @@ int HexEditor::column() {
 }
 
 void HexEditor::currentCellChanged(const QModelIndex &current, const QModelIndex &prev) {
-    int offset = (current.row() * columnCount) + current.column() - 1;
-    ui->charValue->setText(QString().sprintf("%i", binaryData.at(offset)));
-    ui->ucharValue->setText(QString().sprintf("%u", binaryData.ucharValueAt(offset)));
-    ui->shortValue->setText(QString().sprintf("%i", binaryData.shortValueAt(offset)));
-    ui->ushortValue->setText(QString().sprintf("%u", binaryData.ushortValueAt(offset)));
-    ui->longValue->setText(QString().sprintf("%li", binaryData.longValueAt(offset)));
-    ui->ulongValue->setText(QString().sprintf("%lu", binaryData.ulongValueAt(offset)));
-    ui->longLongValue->setText(QString().sprintf("%lli", binaryData.longLongValueAt(offset)));
-    ui->ulongLongValue->setText(QString().sprintf("%llu", binaryData.ulongLongValueAt(offset)));
-    ui->floatValue->setText(QString().sprintf("%g", binaryData.floatValueAt(offset)));
-    ui->doubleValue->setText(QString().sprintf("%g", binaryData.doubleValueAt(offset)));
-    ui->ldoubleValue->setText(QString().sprintf("%lg", binaryData.ldoubleValueAt(offset)));
+    unsigned long offset = static_cast<unsigned long>((current.row() * columnCount) + current.column() - 1);
+    ui->charValue->setText(QString().sprintf("%i", binaryData.at(static_cast<int>(offset))));
+    ui->ucharValue->setText(QString().sprintf("%u", binaryData.ucharAt(offset)));
+    ui->shortValue->setText(QString().sprintf("%i", binaryData.shortAt(offset)));
+    ui->ushortValue->setText(QString().sprintf("%u", binaryData.ushortAt(offset)));
+    ui->longValue->setText(QString().sprintf("%li", binaryData.longAt(offset)));
+    ui->ulongValue->setText(QString().sprintf("%lu", binaryData.ulongAt(offset)));
+    ui->longLongValue->setText(QString().sprintf("%lli", binaryData.longLongAt(offset)));
+    ui->ulongLongValue->setText(QString().sprintf("%llu", binaryData.ulongLongAt(offset)));
+    ui->floatValue->setText(QString().sprintf("%g", binaryData.floatAt(offset)));
+    ui->doubleValue->setText(QString().sprintf("%g", binaryData.doubleAt(offset)));
+    ui->ldoubleValue->setText(QString().sprintf("%lg", binaryData.ldoubleAt(offset)));
     ui->stringValue->setText(binaryData.stringAt(offset, 20));
     // Обновить последний столбец - тот что графически созданный ASCII
     model->updateCell(current.row(), columnCount + 1);
@@ -237,7 +237,7 @@ QItemSelectionModel*  HexEditor::selectionModel() {
     return ui->hexEditor->selectionModel();
 }
 
-void HexEditor::copy(int copy_addr, BByteArray *copy_from, int start_idx, int length) {
+void HexEditor::copy(int copy_addr, StructureByteArray *copy_from, int start_idx, int length) {
     QByteArray b_tmp = copy_from->mid(start_idx, length);
     binaryData.replace(copy_addr, length, b_tmp);
     model->updateData();
@@ -252,8 +252,8 @@ bool HexEditor::isExported() {
     return exported;
 }
 
-BByteArray HexEditor::selectedData() {
-    BByteArray result;
+StructureByteArray HexEditor::selectedData() {
+    StructureByteArray result;
     QModelIndexList l = ui->hexEditor->selectionModel()->selectedIndexes();
     for (QModelIndex idx : l) {
         result.append(static_cast<char>(this->model->getByte(idx)));
@@ -269,19 +269,19 @@ unsigned long HexEditor::getCurrentAddress () {
     return getAddress (ui->hexEditor->currentIndex().row(), ui->hexEditor->currentIndex().column());
 }
 
-void HexEditor::setBinaryData(BByteArray binaryData) {
+void HexEditor::setBinaryData(StructureByteArray binaryData) {
     this->binaryData = binaryData;
 }
 
-BByteArray *HexEditor::getBinaryData() {
+StructureByteArray *HexEditor::getBinaryData() {
     return &binaryData;
 }
 
-void HexEditor::setCompareData(BByteArray *compareData) {
+void HexEditor::setCompareData(StructureByteArray *compareData) {
     this->compareData = compareData;
 }
 
-BByteArray *HexEditor::getCompareData() {
+StructureByteArray *HexEditor::getCompareData() {
     return compareData;
 }
 
@@ -302,10 +302,10 @@ void HexEditor::setResizeMode(int value) {
     updateColumnCount();
 }
 
-BByteArray HexEditor::getBinaryDataByIndex(const QModelIndex &index, int length) {
+StructureByteArray HexEditor::getBinaryDataByIndex(const QModelIndex &index, int length) {
     return getBinaryDataByIndex((index.row() * columnCount) + index.column() - 1, length);
 }
 
-BByteArray HexEditor::getBinaryDataByIndex(int offset, int length) {
+StructureByteArray HexEditor::getBinaryDataByIndex(int offset, int length) {
     return binaryData.mid(offset, length);
 }

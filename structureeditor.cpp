@@ -7,19 +7,25 @@
 #include <QJsonArray>
 
 #include "hexeditor.h"
-#include "components/bbytearray.h"
+#include "components/structurebytearray.h"
 #include "components/jsonstoreddata.h"
-#include <components/jsonstoreddatahelper.h>
 
 StructureEditor::StructureEditor(QWidget *parent) :
     QWidget(parent),
     ui(new Ui::StructureEditor) {
     ui->setupUi(this);
     utf8Codec = QTextCodec::codecForName("UTF-8");
+    model = new JsonTreeModel();
+    ui->structureView->setModel(model);
 }
 
 StructureEditor::~StructureEditor() {
     delete ui;
+    if (jsonStoredData != nullptr) {
+        jsonStoredData->freeData();
+        delete jsonStoredData;
+    }
+    delete model;
 }
 
 void StructureEditor::parseJSONDocument(QString json) {
@@ -28,7 +34,8 @@ void StructureEditor::parseJSONDocument(QString json) {
     QJsonDocument document = QJsonDocument::fromJson(codec->fromUnicode(json), &error);
     QJsonObject jsonObject;
     if (jsonStoredData != nullptr) {
-        JsonStoredDataHelper::freeData(jsonStoredData);
+        jsonStoredData->freeData();
+        delete jsonStoredData;
     }
     jsonStoredData = new JsonStoredData();
 
@@ -36,19 +43,22 @@ void StructureEditor::parseJSONDocument(QString json) {
     if (error.error == QJsonParseError::NoError) {
         QStringList keys = document.object().keys();
         if (keys.contains("extesions") && document.object().value("extesions").isArray()) {
-            jsonObject.insert("extesions", addExtensions(document.object().value("extesions").toArray()));
+            JsonStoredData *data = new JsonStoredData(jsonStoredData, EXTENSIONS_TYPE, "extensions");
+            data->setValue(addExtensions(document.object().value("extesions").toArray()));
             keys.removeAt(keys.indexOf("extesions"));
+            jsonStoredData->appendField(data);
         }
         if (keys.contains("signature") && document.object().value("signature").isString()) {
-            jsonObject.insert("signature", checkSignature(document.object().value("signature").toString(), 0));
+            JsonStoredData *data = new JsonStoredData(jsonStoredData, SIGNATURE_TYPE, "signature");
+            data->setCheckValue(document.object().value("signature").toString());
+            data->readDataValue(hexEditor->getBinaryData());
+            jsonStoredData->appendField(data);
             keys.removeAt(keys.indexOf("signature"));
         }
-        QJsonObject object = parseKeys(document.object(), 0, keys);
-        for (QString key : object.keys()) {
-            jsonObject.insert(key, object.value(key));
-        }
-        QJsonDocument parsedDocument(jsonObject);
-        ui->structureEdit->setText(utf8Codec->toUnicode(parsedDocument.toJson(QJsonDocument::Indented)));
+        parseObject(document.object(), jsonStoredData, keys);
+        while (jsonStoredData->resolveAllReferences(hexEditor->getBinaryData()) > 0);
+        ui->structureEdit->setText(jsonStoredData->toString());
+        model->setRoot(jsonStoredData);
     } else {
         qDebug() << error.errorString();
     }
@@ -69,48 +79,30 @@ void StructureEditor::setHexEditor(HexEditor *hexEditor) {
     this->hexEditor = hexEditor;
 }
 
-QJsonArray StructureEditor::addExtensions(const QJsonArray &array) {
-    QJsonArray jsonArray;
+QStringList StructureEditor::addExtensions(const QJsonArray &array) {
+    QStringList extensions;
     for (int i = 0; i < array.size(); i++) {
         if (array.at(i).isString()) {
-            jsonArray.append(QJsonValue(array.at(i).toString()));
+            extensions.append(array.at(i).toString());
         }
     }
-    return jsonArray;
+    return extensions;
 }
 
-QJsonValue StructureEditor::checkSignature(QString signature, unsigned long baseOffset) {
-    QString eq = "";
-    if (signature.startsWith("0x") && hexEditor != nullptr) {
-        int sigSize = (signature.size() - 2) / 2;
-        QString hex = "0x" + hexEditor->getBinaryData()->hexAt(static_cast<int>(baseOffset), sigSize);
-        eq = hex.compare(signature, Qt::CaseInsensitive) == 0 ? " (correct)" : " (incorrect)";
-    }
-    return QJsonValue(signature + eq);
-}
-
-QJsonObject StructureEditor::parseKeys(const QJsonObject &jsonObject, unsigned long baseOffset, const QStringList &keys) {
-    QStringList keyList;
-    if (keys.isEmpty()) {
-        keyList = jsonObject.keys();
-    } else {
-        keyList = keys;
-    }
-    QJsonObject object;
+void StructureEditor::parseObject(const QJsonObject &object, JsonStoredData *data, const QStringList &keys) {
+    QStringList keyList = keys.isEmpty() ? object.keys() : keys;
     for (QString key : keyList) {
-        auto value = jsonObject.value(key);
+        QJsonValue value = object.value(key);
         if (value.isObject()) {
-            QJsonValue receivedValue = parseObject(value.toObject(), baseOffset);
-            if (!receivedValue.isNull() && !receivedValue.isUndefined()) {
-                object.insert(key, receivedValue);
-            }
+            parseValue(value.toObject(), key, data);
         }
     }
-    return object;
+    data->reOrderFields();
+    data->updateOffset();
 }
 
-QJsonValue StructureEditor::parseObject(const QJsonObject &object, unsigned long baseOffset) {
-    QJsonValue value;
+void StructureEditor::parseValue(const QJsonObject &object, QString name, JsonStoredData *data, int arrayIndex) {
+    JsonStoredData *field = nullptr;
     bool contatinsMandatoryKeys = true;
     for (QString field : objectMandatoryFields) {
         if (!object.keys().contains(field)) {
@@ -118,7 +110,9 @@ QJsonValue StructureEditor::parseObject(const QJsonObject &object, unsigned long
         }
     }
     if (contatinsMandatoryKeys && hexEditor != nullptr) {
-        unsigned long offset;
+        unsigned long offset = 0;
+        QString offsetReference;
+        bool resolved = true;
         int type = jsonTypes.indexOf(object.value("type").toString());
         if (object.value("offset").isString()) {
             QString offsetString = object.value("offset").toString();
@@ -126,86 +120,142 @@ QJsonValue StructureEditor::parseObject(const QJsonObject &object, unsigned long
                 bool status;
                 offset = offsetString.mid(2).toULong(&status, 16);
                 if (!status) {
-                    return QJsonValue();
+                    return;
                 }
             } else {
                 bool status;
                 offset = offsetString.toULong(&status, 10);
                 if (!status) {
-                    return QJsonValue();
+                    offsetReference = offsetString;
+                    resolved = false;
                 }
             }
         } else if (object.value("offset").isDouble()){
             offset = static_cast<unsigned long>(object.value("offset").toInt());
         } else {
-            return QJsonValue();
+            return;
         }
-        offset += baseOffset;
-        switch (type) {
-        case SIGNATURE_TYPE: break;
-        case CHAR_TYPE: return QJsonValue(static_cast<int>(hexEditor->getBinaryData()->at(static_cast<int>(offset))));
-        case UCHAR_TYPE:
-            return QJsonValue(static_cast<int>(hexEditor->getBinaryData()->ucharValueAt(static_cast<int>(offset))));
-        case SHORT_TYPE: return QJsonValue(hexEditor->getBinaryData()->shortValueAt(static_cast<int>(offset)));
-        case USHORT_TYPE: return QJsonValue(hexEditor->getBinaryData()->ushortValueAt(static_cast<int>(offset)));
-        case LONG_TYPE:
-            return QJsonValue(QString().sprintf("%i", hexEditor->getBinaryData()->longValueAt(static_cast<int>(offset))));
-        case ULONG_TYPE:
-            return QJsonValue(QString().sprintf("%u", hexEditor->getBinaryData()->ulongValueAt(static_cast<int>(offset))));
-        case LONG_LONG_TYPE:
-            return QJsonValue(QString().sprintf("%i", hexEditor->getBinaryData()->longLongValueAt(static_cast<int>(offset))));
-        case ULONG_LONG_TYPE:
-            return QJsonValue(QString().sprintf("%u", hexEditor->getBinaryData()->ulongLongValueAt(static_cast<int>(offset))));
-        case FLOAT_TYPE:
-            return QJsonValue(static_cast<double>(hexEditor->getBinaryData()->floatValueAt(static_cast<int>(offset))));
-        case DOUBLE_TYPE:
-            return QJsonValue(hexEditor->getBinaryData()->doubleValueAt(static_cast<int>(offset)));
-        case LDOUBLE_TYPE:
-            return QJsonValue(QString().sprintf("%lg", hexEditor->getBinaryData()->ldoubleValueAt(static_cast<int>(offset))));
-        case STRING_TYPE: {
-            if (!object.keys().contains("size") || !object.value("size").isDouble()) {
-                return QJsonValue();
+        if (type >= CHAR_TYPE && type <= LDOUBLE_TYPE) {
+            field = new JsonStoredData(data, offset, type, name, arrayIndex);
+            if (resolved) {
+                field->readDataValue(hexEditor->getBinaryData());
+            } else {
+                field->setOffsetReference(offsetReference);
+                field->resolveReferences(hexEditor->getBinaryData());
             }
-            int size = object.value("size").toInt();
-            return QJsonValue(hexEditor->getBinaryData()->stringAt(static_cast<int>(offset), size));
-        }
-        case HEX_TYPE: {
-            if (!object.keys().contains("size") || !object.value("size").isDouble()) {
-                return QJsonValue();
+        } else if (type == STRING_TYPE || type == HEX_TYPE) {
+            if (object.keys().contains("size")) {
+                if (object.value("size").isDouble()) {
+                    unsigned long size = static_cast<unsigned long>(object.value("size").toInt());
+                    field = new JsonStoredData(data, offset, type, name, arrayIndex, size);
+                    if (resolved) {
+                        field->readDataValue(hexEditor->getBinaryData());
+                    } else {
+                        field->setOffsetReference(offsetReference);
+                        field->resolveReferences(hexEditor->getBinaryData());
+                    }
+                } else if (object.value("size").isString()) {
+                    field = new JsonStoredData(data, offset, type, name, arrayIndex);
+                    QString reference = object.value("size").toString();
+                    field->setSizeReference(reference);
+                    if (!resolved) {
+                        field->setOffsetReference(offsetReference);
+                    }
+                    field->resolveReferences(hexEditor->getBinaryData());
+                }
             }
-            int size = object.value("size").toInt();
-            return QJsonValue(hexEditor->getBinaryData()->hexAt(static_cast<int>(offset), size));
-        }
-        case ARRAY_TYPE: {
-            if (!object.keys().contains("size") || !object.value("size").isDouble()
-                    || !object.keys().contains("item") || !object.value("item").isObject()
-                    || !object.keys().contains("itemSize") || !object.value("itemSize").isDouble()) {
-                return QJsonValue();
+        } else {
+            switch (type) {
+            case SIGNATURE_TYPE:
+                if (object.keys().contains("size") && object.keys().contains("signature")
+                        && object.value("signature").isString()) {
+                    if (object.value("size").isDouble()) {
+                        unsigned long size = static_cast<unsigned long>(object.value("size").toInt());
+                        field = new JsonStoredData(data, offset, type, name, arrayIndex, size);
+                        field->setCheckValue(object.value("signature").toString());
+                        if (resolved) {
+                            field->readDataValue(hexEditor->getBinaryData());
+                        } else {
+                            field->setOffsetReference(offsetReference);
+                            field->resolveReferences(hexEditor->getBinaryData());
+                        }
+                    } else if (object.value("size").isString()) {
+                        field = new JsonStoredData(data, offset, type, name, arrayIndex);
+                        field->setCheckValue(object.value("signature").toString());
+                        QString reference = object.value("size").toString();
+                        field->setSizeReference(reference);
+                        if (!resolved) {
+                            field->setOffsetReference(offsetReference);
+                        }
+                        field->resolveReferences(hexEditor->getBinaryData());
+                    }
+                }
+                break;
+            case ARRAY_TYPE:
+                if (object.keys().contains("size") && object.keys().contains("item") && object.value("item").isObject()
+                        && object.keys().contains("itemSize")) {
+                    field = new JsonStoredData(data, offset, type, name, arrayIndex);
+                    if (!resolved) {
+                        field->setOffsetReference(offsetReference);
+                    }
+                    if (object.value("size").isDouble()) {
+                        unsigned long size = static_cast<unsigned long>(object.value("size").toInt());
+                        field->setCount(size);
+                    } else if (object.value("size").isString()) {
+                        QString reference = object.value("size").toString();
+                        field->setCountReference(reference);
+                        field->resolveReferences(nullptr);
+                    } else {
+                        delete field;
+                        field = nullptr;
+                    }
+                    if (field != nullptr) {
+                        if (object.value("itemSize").isDouble()) {
+                            int is = object.value("itemSize").toInt();
+                            if (is < 0) {
+                                is = 0;
+                            }
+                            unsigned long itemSize = static_cast<unsigned long>(is);
+                            field->setItemSize(itemSize);
+                            field->setSize(field->getCount() * itemSize);
+                        } else if (object.value("itemSize").isString()) {
+                            QString reference = object.value("itemSize").toString();
+                            field->setItemSizeReference(reference);
+                        } else {
+                            delete field;
+                            field = nullptr;
+                        }
+                        if (field != nullptr) {
+                            if (field->getSize() != 0) {
+                                for (unsigned long i = 0; i < field->getSize(); i++) {
+                                    parseValue(object.value("item").toObject(), QString("item[%1]").arg(i),
+                                                            field, static_cast<int>(i));
+                                }
+                            } else {
+                                parseValue(object.value("item").toObject(), QString("item[0]"), field, 0);
+                            }
+                        }
+                    }
+                }
+                break;
+            case OBJECT_TYPE:
+                if (object.keys().contains("fields") || !object.value("fields").isObject()) {
+                    field = new JsonStoredData(data, offset, type, name, arrayIndex);
+                    if (!resolved) {
+                        field->setOffsetReference(offsetReference);
+                    }
+                    parseObject(object.value("fields").toObject(), field);
+                }
+                break;
+            case FILE_TYPE: break;
+            case IMAGE_TYPE: break;
+            case IMAGE_SET_TYPE: break;
+            case BINARY_TYPE: break;
+            default: break;
             }
-            int size = object.value("size").toInt();
-            int is = object.value("itemSize").toInt();
-            if (is < 0) {
-                is = 0;
-            }
-            unsigned long itemSize = static_cast<unsigned long>(is);
-            QJsonArray array;
-            for (int i = 0; i < size; i++) {
-                array.append(parseObject(object.value("item").toObject(), offset));
-                offset += itemSize;
-            }
-            return QJsonValue(array);
-        }
-        case OBJECT_TYPE: {
-            if (!object.keys().contains("fields") || !object.value("fields").isObject()) {
-                return QJsonValue();
-            }
-            return QJsonValue(parseKeys(object.value("fields").toObject(), offset));
-        }
-        case FILE_TYPE: break;
-        case IMAGE_TYPE: break;
-        case IMAGE_SET_TYPE: break;
-        case BINARY_TYPE: break;
         }
     }
-    return QJsonValue ();
+    if (field != nullptr) {
+        data->appendField(field);
+    }
 }
