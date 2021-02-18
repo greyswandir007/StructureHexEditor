@@ -24,8 +24,10 @@ public:
     void setHexEditor(HexEditor *hexEditor);
     void clearStructure();
 
-    QStringList getBinaryList();
+    QList<JsonStoredData *> getBinaryList();
     JsonStoredData *getStoredDataByName(QString name);
+
+    void saveStoredData(JsonStoredData *data);
 
 private slots:
     void on_structureView_customContextMenuRequested(const QPoint &pos);

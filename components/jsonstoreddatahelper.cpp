@@ -190,6 +190,8 @@ JsonStoredData *JsonStoredDataHelper::createCopy(JsonStoredData *data) {
     copied->setOffsetReference(data->getOffsetReference());
     copied->setCountReference(data->getCountReference());
     copied->setItemSizeReference(data->getItemSizeReference());
+    copied->setDisplayName(data->getDisplayName());
+    copied->setDisplayNameReference(data->getDisplayNameReference());
     copied->setResolved(data->getResolved());
     for (auto field : data->getFields()) {
         auto f = createCopy(field);
@@ -274,10 +276,10 @@ void JsonStoredDataHelper::objectToBinary(JsonStoredData *data, StructureByteArr
     }
 }
 
-QStringList JsonStoredDataHelper::getBinaryList(JsonStoredData *data) {
-    QStringList list;
+QList<JsonStoredData *> JsonStoredDataHelper::getBinaryList(JsonStoredData *data) {
+    QList<JsonStoredData *> list;
     if (data->getType() == BINARY_TYPE) {
-        list.append(data->getFullName());
+        list.append(data);
     }
     for (auto field : data->getFields()) {
         list.append(getBinaryList(field));

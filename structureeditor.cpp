@@ -88,12 +88,34 @@ void StructureEditor::clearStructure() {
     model->setRoot(jsonStoredData);
 }
 
-QStringList StructureEditor::getBinaryList() {
+QList<JsonStoredData *> StructureEditor::getBinaryList() {
     return JsonStoredDataHelper::getBinaryList(jsonStoredData);
 }
 
 JsonStoredData *StructureEditor::getStoredDataByName(QString name) {
     return JsonStoredDataHelper::findDataByName(jsonStoredData, name);
+}
+
+void StructureEditor::saveStoredData(JsonStoredData *data) {
+    if (data != nullptr) {
+        QString filename = QFileDialog::getSaveFileName(this, tr("Select files"), nullptr, "*.*", nullptr,
+                                                        QFileDialog::DontUseNativeDialog);
+        if (!filename.isEmpty()) {
+            auto bin = data->getValue().toByteArray();
+            QFile f(filename);
+            if (bin.size() > 0 && f.open(QFile::WriteOnly)) {
+                f.write(bin);
+                f.close();
+            } else {
+                StructureByteArray array;
+                JsonStoredDataHelper::objectToBinary(data, &array);
+                if (array.size() > 0 && f.open(QFile::WriteOnly)) {
+                    f.write(array);
+                    f.close();
+                }
+            }
+        }
+    }
 }
 
 QStringList StructureEditor::addExtensions(const QJsonArray &array) {
@@ -120,6 +142,8 @@ void StructureEditor::parseObject(const QJsonObject &object, JsonStoredData *dat
 
 void StructureEditor::parseValue(const QJsonObject &object, QString name, JsonStoredData *data, int arrayIndex) {
     JsonStoredData *field = nullptr;
+    QString displayName;
+    QString displayNameReference;
     bool contatinsMandatoryKeys = true;
     for (QString field : objectMandatoryFields) {
         if (!object.keys().contains(field)) {
@@ -128,7 +152,7 @@ void StructureEditor::parseValue(const QJsonObject &object, QString name, JsonSt
     }
     if (contatinsMandatoryKeys && hexEditor != nullptr) {
         unsigned long offset = 0;
-        QString offsetReference;
+        QString offsetReference;        
         bool resolved = true;
         int type = jsonTypes.indexOf(object.value("type").toString());
         if (object.value("offset").isString()) {
@@ -151,6 +175,12 @@ void StructureEditor::parseValue(const QJsonObject &object, QString name, JsonSt
             offset = static_cast<unsigned long>(object.value("offset").toInt());
         } else {
             return;
+        }
+        if (object.keys().contains("displayName") && object.value("displayName").isString()) {
+            displayName = object.value("displayName").toString();
+        }
+        if (object.keys().contains("displayNameRef") && object.value("displayNameRef").isString()) {
+            displayNameReference = object.value("displayNameRef").toString();
         }
         if (type >= CHAR_TYPE && type <= LDOUBLE_TYPE) {
             field = new JsonStoredData(data, offset, type, name, arrayIndex);
@@ -267,6 +297,12 @@ void StructureEditor::parseValue(const QJsonObject &object, QString name, JsonSt
         }
     }
     if (field != nullptr) {
+        if (!displayName.isEmpty()) {
+            field->setDisplayName(displayName);
+        }
+        if (!displayNameReference.isEmpty()) {
+            field->setDisplayNameReference(displayNameReference);
+        }
         data->appendField(field);
     }
 }
@@ -281,23 +317,7 @@ void StructureEditor::on_structureView_customContextMenuRequested(const QPoint &
         if (pointer != nullptr) {
             JsonStoredData *data = static_cast<JsonStoredData *>(pointer);
             if (data != nullptr) {
-                QString filename = QFileDialog::getSaveFileName(this, tr("Select files"), nullptr, "*.*", nullptr,
-                                                                QFileDialog::DontUseNativeDialog);
-                if (!filename.isEmpty()) {
-                    auto bin = data->getValue().toByteArray();
-                    QFile f(filename);
-                    if (bin.size() > 0 && f.open(QFile::WriteOnly)) {
-                        f.write(bin);
-                        f.close();
-                    } else {
-                        StructureByteArray array;
-                        JsonStoredDataHelper::objectToBinary(data, &array);
-                        if (array.size() > 0 && f.open(QFile::WriteOnly)) {
-                            f.write(array);
-                            f.close();
-                        }
-                    }
-                }
+                saveStoredData(data);
             }
         }
     }

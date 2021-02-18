@@ -3,6 +3,8 @@
 
 #include <QMainWindow>
 
+#include <components/structurenameditem.h>
+
 namespace Ui {
 class HexEditorWindow;
 }
@@ -42,10 +44,13 @@ private slots:
     void openRecent2Triggered();
     void on_applyStructureButton_clicked();
     void on_actionExit_triggered();
-    void on_formatButton_clicked();
+    void on_formatStructureButton_clicked();
     void on_previewButton_clicked();
     void on_imagePaletteButton_clicked();
     void on_imageSaveButton_clicked();
+    void on_imageSaveRawButton_clicked();
+    void on_actionApply_Structure_triggered();
+    void on_actionFormat_Structure_triggered();
 
 private:
     static const int MAX_OFFSET = 10000000;
@@ -63,6 +68,8 @@ private:
     QStringList recentFilePaths;
     QStringList recentStructurePaths;
     unsigned int *currentPalette;
+
+    QList<StructureNamedItem> structureNamedItems;
 };
 
 #endif // HEXEDITORWINDOW_H

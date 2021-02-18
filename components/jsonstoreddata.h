@@ -96,6 +96,12 @@ public:
     void setParent(JsonStoredData *value);
     void updateFullNames();
 
+    QString getDisplayName() const;
+    void setDisplayName(const QString &value);
+
+    QString getDisplayNameReference() const;
+    void setDisplayNameReference(const QString &value);
+
 private:
     void updateReference(unsigned int *value, bool *fail, bool *update, QString reference);
 
@@ -121,6 +127,9 @@ private:
     QString offsetReference;
     QString countReference;
     QString itemSizeReference;
+
+    QString displayName;
+    QString displayNameReference;
 
     bool resolved = true;
 

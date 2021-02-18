@@ -22,7 +22,7 @@ public:
     static unsigned long findValue(JsonStoredData *data, QString fullName, bool *ok);
     static JsonStoredData *findDataByName(JsonStoredData *data, QString fullName);
     static void objectToBinary(JsonStoredData *data, StructureByteArray *array, JsonStoredData *root = nullptr);
-    static QStringList getBinaryList(JsonStoredData *data);
+    static QList<JsonStoredData *> getBinaryList(JsonStoredData *data);
 };
 
 #endif // JSONSTOREDDATAHELPER_H

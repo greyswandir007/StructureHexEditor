@@ -282,6 +282,16 @@ bool JsonStoredData::resolveReferences(StructureByteArray *binary, bool *update)
     updateReference(&offset, &fail, &upd, offsetReference);
     updateReference(&count, &fail, &upd, countReference);
     updateReference(&itemSize, &fail, &upd, itemSizeReference);
+    if (!displayNameReference.isEmpty()) {
+        JsonStoredData *data = JsonStoredDataHelper::findDataByName(this, displayNameReference);
+        if (data != nullptr) {
+            QString value = data->getValue().toString();
+            if (!value.isEmpty() && value.compare(displayName) != 0) {
+                displayName = value;
+                *update = true;
+            }
+        }
+    }
     if (update != nullptr) {
         *update = upd;
     }
@@ -338,6 +348,22 @@ void JsonStoredData::updateReference(unsigned int *value, bool *fail, bool *upda
             *update = true;
         }
     }
+}
+
+QString JsonStoredData::getDisplayNameReference() const {
+    return displayNameReference;
+}
+
+void JsonStoredData::setDisplayNameReference(const QString &value) {
+    displayNameReference = value;
+}
+
+QString JsonStoredData::getDisplayName() const {
+    return displayName;
+}
+
+void JsonStoredData::setDisplayName(const QString &value) {
+    displayName = value;
 }
 
 void JsonStoredData::setParent(JsonStoredData *value) {

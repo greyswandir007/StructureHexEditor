@@ -56,7 +56,8 @@ HEADERS += \
     components/jsonstoreddatahelper.h \
     components/mainview.h \
     palettedialog.h \
-    components/imagepreviewparams.h
+    components/imagepreviewparams.h \
+    components/structurenameditem.h
 
 FORMS += \
         hexeditorwindow.ui \

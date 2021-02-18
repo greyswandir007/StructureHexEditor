@@ -3,7 +3,7 @@
 
 JsonTreeModel::JsonTreeModel(QObject *parent) :
     QAbstractTableModel(parent) {
-    headers << tr("Name") << tr("Full Name") << tr("Offset") << tr("Global Offset") << tr("Size") << tr("Value")
+    headers << tr("Display Name") << tr("Full Name") << tr("Offset") << tr("Global Offset") << tr("Size") << tr("Value")
             << tr("Type") << tr("Count") << tr("Item Size") << tr("References");
 }
 
@@ -19,7 +19,7 @@ QVariant JsonTreeModel::data(const QModelIndex &index, int role) const {
     if (index.isValid() && index.internalPointer() != nullptr && (role == Qt::DisplayRole || role == Qt::EditRole)) {
         JsonStoredData *data = static_cast<JsonStoredData *>(index.internalPointer());
         switch (index.column()) {
-        case 0: return data->getName();
+        case 0: return data->getDisplayName().isEmpty() ? data->getName() : data->getDisplayName();
         case 1: return data->getFullName();
         case 2: return JsonStoredDataHelper::ulongToHex(data->getOffset());
         case 3: return JsonStoredDataHelper::ulongToHex(data->getGlobalOffset());
@@ -55,6 +55,12 @@ QVariant JsonTreeModel::data(const QModelIndex &index, int role) const {
                     references += ", ";
                 }
                 references += "itemSize: " + data->getItemSizeReference();
+            }
+            if (!data->getDisplayNameReference().isEmpty()) {
+                if (!references.isEmpty()) {
+                    references += ", ";
+                }
+                references += "displayName: " + data->getDisplayNameReference();
             }
             return references;
         }

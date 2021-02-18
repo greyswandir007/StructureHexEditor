@@ -101,6 +101,15 @@ void HexEditorWindow::on_actionOpen_triggered() {
             ui->imageSourceBox->addItem("File 1");
             ui->imageSourceBox->addItem("File 2");
             ui->imageSourceBox->setCurrentIndex(0);
+            structureNamedItems.clear();
+            StructureNamedItem item1;
+            item1.fullName = "";
+            item1.displayName = "File 1";
+            structureNamedItems.append(item1);
+            StructureNamedItem item2;
+            item2.fullName = "";
+            item2.displayName = "File 1";
+            structureNamedItems.append(item2);
 
             ui->leftFilePanel->loadFile(files.at(0));
             ui->rightFilePanel->loadFile(files.at(1));
@@ -292,6 +301,11 @@ void HexEditorWindow::openHexFile(QString filename) {
     ui->imageSourceBox->clear();
     ui->imageSourceBox->addItem("File");
     ui->imageSourceBox->setCurrentIndex(0);
+    structureNamedItems.clear();
+    StructureNamedItem item;
+    item.fullName = "";
+    item.displayName = "File";
+    structureNamedItems.append(item);
     ui->structureEditor->clearStructure();
     ui->leftFilePanel->loadFile(filename);
     ui->rightFilePanel->hide();
@@ -405,9 +419,37 @@ void HexEditorWindow::openRecent2Triggered() {
 
 void HexEditorWindow::on_applyStructureButton_clicked() {
     ui->structureEditor->parseJSONDocument(ui->structureEdit->toPlainText());
-    QStringList list = ui->structureEditor->getBinaryList();
+    QList<JsonStoredData *> list = ui->structureEditor->getBinaryList();
+    if (ui->imageSourceBox->count() > 1) {
+        if (ui->imageSourceBox->itemText(1).compare("File 2") == 0) {
+            ui->imageSourceBox->clear();
+            ui->imageSourceBox->addItem("File 1");
+            ui->imageSourceBox->addItem("File 2");
+            structureNamedItems.clear();
+            StructureNamedItem item1;
+            item1.fullName = "";
+            item1.displayName = "File 1";
+            structureNamedItems.append(item1);
+            StructureNamedItem item2;
+            item2.fullName = "";
+            item2.displayName = "File 1";
+            structureNamedItems.append(item2);
+        } else {
+            ui->imageSourceBox->clear();
+            ui->imageSourceBox->addItem("File");
+            structureNamedItems.clear();
+            StructureNamedItem item;
+            item.fullName = "";
+            item.displayName = "File";
+            structureNamedItems.append(item);
+        }
+    }
     for (auto item : list) {
-        ui->imageSourceBox->addItem(item);
+        StructureNamedItem stItem;
+        stItem.fullName = item->getFullName();
+        stItem.displayName = item->getDisplayName().isEmpty() ? item->getFullName() : item->getDisplayName();
+        structureNamedItems.append(stItem);
+        ui->imageSourceBox->addItem(item->getDisplayName());
     }
 }
 
@@ -415,7 +457,7 @@ void HexEditorWindow::on_actionExit_triggered() {
     QApplication::quit();
 }
 
-void HexEditorWindow::on_formatButton_clicked() {
+void HexEditorWindow::on_formatStructureButton_clicked() {
     ui->structureEdit->setText(ui->structureEditor->formatJSONDocument(ui->structureEdit->toPlainText()));
 }
 
@@ -434,7 +476,8 @@ void HexEditorWindow::on_previewButton_clicked() {
     } else if (ui->imageSourceBox->currentText().compare("File 2") == 0) {
         ui->imagePreview->previewImage(params, ui->rightFilePanel->getBinaryData());
     } else {
-        JsonStoredData *data = ui->structureEditor->getStoredDataByName(ui->imageSourceBox->currentText());
+        QString fullName = structureNamedItems.at(ui->imageSourceBox->currentIndex()).fullName;
+        JsonStoredData *data = ui->structureEditor->getStoredDataByName(fullName);
         if (data != nullptr) {
             StructureByteArray *array = new StructureByteArray(data->getValue().toByteArray());
             ui->imagePreview->previewImage(params, array);
@@ -454,4 +497,26 @@ void HexEditorWindow::on_imagePaletteButton_clicked() {
 
 void HexEditorWindow::on_imageSaveButton_clicked() {
     ui->imagePreview->saveImage();
+}
+
+void HexEditorWindow::on_imageSaveRawButton_clicked() {
+    if (ui->imageSourceBox->currentText().compare("File") == 0
+            || ui->imageSourceBox->currentText().compare("File 1") == 0) {
+
+        //TODO Save as left file
+    } else if (ui->imageSourceBox->currentText().compare("File 2") == 0) {
+        //TODO Save as right file
+    } else {
+        QString fullName = structureNamedItems.at(ui->imageSourceBox->currentIndex()).fullName;
+        JsonStoredData *data = ui->structureEditor->getStoredDataByName(fullName);
+        ui->structureEditor->saveStoredData(data);
+    }
+}
+
+void HexEditorWindow::on_actionApply_Structure_triggered() {
+    on_applyStructureButton_clicked();
+}
+
+void HexEditorWindow::on_actionFormat_Structure_triggered() {
+    on_formatStructureButton_clicked();
 }
