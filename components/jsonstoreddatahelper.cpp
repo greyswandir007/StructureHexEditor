@@ -237,6 +237,12 @@ unsigned long JsonStoredDataHelper::findValue(JsonStoredData *data, QString full
 }
 
 JsonStoredData *JsonStoredDataHelper::findDataByName(JsonStoredData *data, QString fullName) {
+    JsonStoredData *current = data;
+    if (fullName.startsWith(".")) {
+        fullName = fullName.mid(1);
+    } else {
+        current = data->getRoot();
+    }
     QStringList lst = fullName.split(".");
     if (lst.isEmpty()) {
         return nullptr;
@@ -245,7 +251,7 @@ JsonStoredData *JsonStoredDataHelper::findDataByName(JsonStoredData *data, QStri
     if (ref != -1) {
         lst.removeLast();
     }
-    JsonStoredData *current = data->getRoot();
+
     for (int i = 0; i < lst.size(); i++) {
         JsonStoredData *found = nullptr;
         for (JsonStoredData *field : current->getFields()) {
