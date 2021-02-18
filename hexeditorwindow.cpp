@@ -57,6 +57,7 @@ HexEditorWindow::HexEditorWindow(QWidget *parent) :
         currentPalette[i] = pal[i];
     }
     ui->imagePreview->setCurrentPalette(currentPalette);
+    highlighter = new JsonHighlighter(ui->structureEdit->document());
 }
 
 HexEditorWindow::~HexEditorWindow() {
@@ -74,6 +75,7 @@ HexEditorWindow::~HexEditorWindow() {
     }
     settings.sync();
     delete ui;
+    delete highlighter;
 }
 
 void HexEditorWindow::resizeEvent(QResizeEvent *event) {

@@ -3,7 +3,8 @@
 
 #include <QMainWindow>
 
-#include <components/structurenameditem.h>
+#include "components/jsonhighlighter.h"
+#include "components/structurenameditem.h"
 
 namespace Ui {
 class HexEditorWindow;
@@ -70,6 +71,8 @@ private:
     unsigned int *currentPalette;
 
     QList<StructureNamedItem> structureNamedItems;
+
+    JsonHighlighter *highlighter = nullptr;
 };
 
 #endif // HEXEDITORWINDOW_H

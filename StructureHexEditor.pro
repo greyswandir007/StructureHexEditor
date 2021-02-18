@@ -39,7 +39,8 @@ SOURCES += \
     components/structurebytearray.cpp \
     components/jsonstoreddatahelper.cpp \
     components/mainview.cpp \
-    palettedialog.cpp
+    palettedialog.cpp \
+    components/jsonhighlighter.cpp
 
 HEADERS += \
         hexeditorwindow.h \
@@ -57,7 +58,8 @@ HEADERS += \
     components/mainview.h \
     palettedialog.h \
     components/imagepreviewparams.h \
-    components/structurenameditem.h
+    components/structurenameditem.h \
+    components/jsonhighlighter.h
 
 FORMS += \
         hexeditorwindow.ui \
