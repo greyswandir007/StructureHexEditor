@@ -7,6 +7,9 @@ namespace Ui {
 class PaletteDialog;
 }
 
+class StructureEditor;
+struct StructureNamedItem;
+
 class PaletteDialog : public QDialog
 {
     Q_OBJECT
@@ -18,12 +21,15 @@ public:
     static unsigned int *getDefaultPalette();
 
     unsigned int *getPaletteCopy();
+    void setStructureEditor(StructureEditor *editor);
+    void setStructureNamedItems(const QList<StructureNamedItem> &value);
 
 private slots:
     void colorButtonClicked();
     void on_loadButton_clicked();
     void on_saveButton_clicked();
     void on_resetButton_clicked();
+    void on_readButton_clicked();
 
 private:
     QPixmap emptyPixmap(int size, QColor color);
@@ -31,6 +37,8 @@ private:
     Ui::PaletteDialog *ui;
     QList<QPushButton*> buttonList;
     unsigned int palette[256];
+    StructureEditor *structureEditor = nullptr;
+    QList<StructureNamedItem> structureNamedItems;
 };
 
 #endif // PALETTEDIALOG_H

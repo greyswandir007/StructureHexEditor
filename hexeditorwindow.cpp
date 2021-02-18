@@ -1,13 +1,15 @@
 #include "hexeditorwindow.h"
 #include "palettedialog.h"
 #include "ui_hexeditorwindow.h"
+
 #include <QDebug>
 #include <QFileDialog>
 #include <QInputDialog>
 #include <QMessageBox>
 #include <QSettings>
 #include <QTextCodec>
-#include <components/propertiesdialog.h>
+
+#include "components/propertiesdialog.h"
 
 HexEditorWindow::HexEditorWindow(QWidget *parent) :
     QMainWindow(parent),
@@ -488,6 +490,8 @@ void HexEditorWindow::on_previewButton_clicked() {
 
 void HexEditorWindow::on_imagePaletteButton_clicked() {
     PaletteDialog dlg(currentPalette);
+    dlg.setStructureEditor(ui->structureEditor);
+    dlg.setStructureNamedItems(structureNamedItems);
     if (dlg.exec()) {
         delete currentPalette;
         currentPalette = dlg.getPaletteCopy();

@@ -1,4 +1,5 @@
 #include "palettedialog.h"
+#include "structureeditor.h"
 #include "ui_palettedialog.h"
 
 #include <QColorDialog>
@@ -6,7 +7,9 @@
 #include <QDebug>
 #include <QFileDialog>
 
-#include <components/structurebytearray.h>
+#include "components/structurebytearray.h"
+#include "components/structurenameditem.h"
+#include "components/jsonstoreddata.h"
 
 static unsigned int default256Palette[256] = {
     0x000000, 0x0000AA, 0x00AA00, 0x00AAAA, 0xAA0000, 0xAA00AA, 0xAA5500, 0xAAAAAA,
@@ -97,6 +100,10 @@ unsigned int *PaletteDialog::getPaletteCopy() {
     return pal;
 }
 
+void PaletteDialog::setStructureEditor(StructureEditor *editor) {
+    structureEditor = editor;
+}
+
 void PaletteDialog::colorButtonClicked() {
     auto button = static_cast<QPushButton *>(QObject::sender());
     int index = buttonList.indexOf(button);
@@ -118,6 +125,13 @@ QPixmap PaletteDialog::emptyPixmap(int size, QColor color) {
     painter.drawRect(0,0,size,size);
     painter.end();
     return pix;
+}
+
+void PaletteDialog::setStructureNamedItems(const QList<StructureNamedItem> &value) {
+    structureNamedItems = value;
+    for (StructureNamedItem item : structureNamedItems) {
+        ui->sourceBox->addItem(item.displayName);
+    }
 }
 
 void PaletteDialog::on_loadButton_clicked() {
@@ -162,5 +176,29 @@ void PaletteDialog::on_resetButton_clicked() {
     for (int i = 0; i < 256; i++) {
         palette[i] = default256Palette[i];
         buttonList[i]->setIcon(QIcon(emptyPixmap(16, palette[i])));
+    }
+}
+
+void PaletteDialog::on_readButton_clicked() {
+    if (structureEditor != nullptr && !structureNamedItems.isEmpty()) {
+        if (ui->sourceBox->currentText().compare("File") == 0
+                || ui->sourceBox->currentText().compare("File 1") == 0) {
+            //TODO read from left panel
+        } else if (ui->sourceBox->currentText().compare("File 2") == 0) {
+            //TODO read from right panel
+        } else {
+            QString fullName = structureNamedItems.at(ui->sourceBox->currentIndex()).fullName;
+            JsonStoredData *data = structureEditor->getStoredDataByName(fullName);
+            if (data != nullptr) {
+                StructureByteArray *array = new StructureByteArray(data->getValue().toByteArray());
+                unsigned int offset = 0;
+                for (int i = 0; i < 256 && offset < static_cast<unsigned int>(array->size()); i++) {
+                    palette[i] = array->bgrAt(offset);
+                    offset += 3;
+                    buttonList[i]->setIcon(QIcon(emptyPixmap(16, palette[i])));
+                }
+                delete array;
+            }
+        }
     }
 }
