@@ -163,9 +163,9 @@ void HexEditor::resizeEvent(QResizeEvent* event) {
 void HexEditor::appendBinaryFile(QString filename, int offset) {
     QFile f(filename);
     if (f.open(f.ReadOnly)) {
-        qint64 filesize = f.size();
-        if (filesize > 0) {
-            QByteArray b_tmp = f.read(filesize);
+        qint64 fileSize = f.size();
+        if (fileSize > 0) {
+            QByteArray b_tmp = f.read(fileSize);
             binaryData.replace(offset, b_tmp.length(), b_tmp);
             model->updateData();
             this->resizeTable();
@@ -186,19 +186,22 @@ int HexEditor::column() {
 }
 
 void HexEditor::currentCellChanged(const QModelIndex &current, const QModelIndex &prev) {
-    unsigned long offset = static_cast<unsigned long>((current.row() * columnCount) + current.column() - 1);
-    ui->charValue->setText(QString().sprintf("%i", binaryData.at(static_cast<int>(offset))));
-    ui->ucharValue->setText(QString().sprintf("%u", binaryData.ucharAt(offset)));
-    ui->shortValue->setText(QString().sprintf("%i", binaryData.shortAt(offset)));
-    ui->ushortValue->setText(QString().sprintf("%u", binaryData.ushortAt(offset)));
-    ui->longValue->setText(QString().sprintf("%li", binaryData.longAt(offset)));
-    ui->ulongValue->setText(QString().sprintf("%lu", binaryData.ulongAt(offset)));
-    ui->longLongValue->setText(QString().sprintf("%lli", binaryData.longLongAt(offset)));
-    ui->ulongLongValue->setText(QString().sprintf("%llu", binaryData.ulongLongAt(offset)));
-    ui->floatValue->setText(QString().sprintf("%g", binaryData.floatAt(offset)));
-    ui->doubleValue->setText(QString().sprintf("%g", binaryData.doubleAt(offset)));
-    ui->ldoubleValue->setText(QString().sprintf("%lg", binaryData.ldoubleAt(offset)));
-    ui->stringValue->setText(binaryData.stringAt(offset, 20));
+    if (!binaryData.isEmpty()) {
+        unsigned int row = static_cast<unsigned int>(current.row());
+        unsigned int offset = row * static_cast<unsigned int>(columnCount) + static_cast<unsigned int>(current.column()) - 1;
+        ui->charValue->setText(QString().sprintf("%i", binaryData.at(static_cast<int>(offset))));
+        ui->ucharValue->setText(QString().sprintf("%u", binaryData.ucharAt(offset)));
+        ui->shortValue->setText(QString().sprintf("%i", binaryData.shortAt(offset)));
+        ui->ushortValue->setText(QString().sprintf("%u", binaryData.ushortAt(offset)));
+        ui->longValue->setText(QString().sprintf("%i", binaryData.longAt(offset)));
+        ui->ulongValue->setText(QString().sprintf("%u", binaryData.ulongAt(offset)));
+        ui->longLongValue->setText(QString().sprintf("%lli", binaryData.longLongAt(offset)));
+        ui->ulongLongValue->setText(QString().sprintf("%llu", binaryData.ulongLongAt(offset)));
+        ui->floatValue->setText(QString().sprintf("%g", binaryData.floatAt(offset)));
+        ui->doubleValue->setText(QString().sprintf("%g", binaryData.doubleAt(offset)));
+        ui->ldoubleValue->setText(QString().sprintf("%lg", binaryData.ldoubleAt(offset)));
+        ui->stringValue->setText(binaryData.stringAt(offset, 20));
+    }
     // Обновить последний столбец - тот что графически созданный ASCII
     model->updateCell(current.row(), columnCount + 1);
     // И если сменилась строка - то и убрать нарисованный "курсор" со старой строки
@@ -261,11 +264,11 @@ StructureByteArray HexEditor::selectedData() {
     return result;
 }
 
-unsigned long HexEditor::getAddress (int row, int col) {
-    return static_cast<unsigned long>(row * columnCount + col - 1);
+unsigned int HexEditor::getAddress(int row, int col) {
+    return static_cast<unsigned int>(row * columnCount + col - 1);
 }
 
-unsigned long HexEditor::getCurrentAddress () {
+unsigned int HexEditor::getCurrentAddress() {
     return getAddress (ui->hexEditor->currentIndex().row(), ui->hexEditor->currentIndex().column());
 }
 
@@ -285,11 +288,11 @@ StructureByteArray *HexEditor::getCompareData() {
     return compareData;
 }
 
-int HexEditor::getColumnCount() const {
+unsigned int HexEditor::getColumnCount() const {
     return columnCount;
 }
 
-void HexEditor::setColumnCount(int value) {
+void HexEditor::setColumnCount(unsigned int value) {
     columnCount = value;
 }
 

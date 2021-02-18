@@ -44,16 +44,16 @@ public:
     void resizeEvent(QResizeEvent* event);
     void appendBinaryFile(QString filename, int offset);
 
-    unsigned long getAddress (int row, int col);
-    unsigned long getCurrentAddress ();
+    unsigned int getAddress (int row, int col);
+    unsigned int getCurrentAddress ();
 
     void setBinaryData(StructureByteArray binaryData);
     StructureByteArray *getBinaryData();
     void setCompareData(StructureByteArray *compareData);
     StructureByteArray *getCompareData();
 
-    int getColumnCount() const;
-    void setColumnCount(int value);
+    unsigned int getColumnCount() const;
+    void setColumnCount(unsigned int value);
     int getResizeMode() const;
     void setResizeMode(int value);
 
@@ -75,7 +75,7 @@ private:
     bool exported;
     StructureByteArray binaryData;
     StructureByteArray *compareData;
-    int columnCount;
+    unsigned int columnCount;
     int resizeMode;
     QString filename;
     int charWidth;

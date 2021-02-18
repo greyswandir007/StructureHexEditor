@@ -8,16 +8,18 @@
 
 static const QList<QString> jsonTypes = {"none", "extensions", "signature", "char", "uchar", "short", "ushort", "long",
                                          "ulong", "longlong", "ulonglong", "float", "double", "ldouble", "string",
-                                         "hex", "array", "object", "file", "image", "imageset", "binary"};
+                                         "hex", "array", "object", "binary", "image", "imageset"};
 
 static const QList<QString> objectMandatoryFields = {"type", "offset"};
 
 static const QList<QString> objectReferenceFields = {"offset", "size", "globalOffset", "after", "count", "itemSize"};
 
+static const unsigned long fixedTypesSize[] = {0, 0, 0, 1, 1, 2, 2, 4, 4, 8, 8, 4, 8, 10};
+
 enum JsonTypes {
     NONE_TYPE, EXTENSIONS_TYPE, SIGNATURE_TYPE, CHAR_TYPE, UCHAR_TYPE, SHORT_TYPE, USHORT_TYPE, LONG_TYPE, ULONG_TYPE,
     LONG_LONG_TYPE, ULONG_LONG_TYPE, FLOAT_TYPE, DOUBLE_TYPE, LDOUBLE_TYPE, STRING_TYPE, HEX_TYPE,
-    ARRAY_TYPE, OBJECT_TYPE, FILE_TYPE, IMAGE_TYPE, IMAGE_SET_TYPE, BINARY_TYPE
+    ARRAY_TYPE, OBJECT_TYPE, BINARY_TYPE, IMAGE_TYPE, IMAGE_SET_TYPE
 };
 
 enum ReferenceFields {
@@ -29,17 +31,17 @@ class JsonStoredData {
 public:
     JsonStoredData(JsonStoredData *parent = nullptr);
     JsonStoredData(JsonStoredData *parent, int type, QString name);
-    JsonStoredData(JsonStoredData *parent, unsigned long offset, int type, QString name, int arrayIndex = -1,
-                   unsigned long size = 0, unsigned long count = 0);
+    JsonStoredData(JsonStoredData *parent, unsigned int offset, int type, QString name, int arrayIndex = -1,
+                   unsigned int size = 0, unsigned int count = 0);
 
-    unsigned long getSize() const;
-    void setSize(unsigned long value);
-    unsigned long getOffset() const;
-    void setOffset(unsigned long value);
-    unsigned long getGlobalOffset() const;
-    void setGlobalOffset(unsigned long value);
-    unsigned long getAfter() const;
-    void setAfter(unsigned long value);
+    unsigned int getSize() const;
+    void setSize(unsigned int value);
+    unsigned int getOffset() const;
+    void setOffset(unsigned int value);
+    unsigned int getGlobalOffset() const;
+    void setGlobalOffset(unsigned int value);
+    unsigned int getAfter() const;
+    void setAfter(unsigned int value);
     int getType() const;
     void setType(int value);
     QString getName() const;
@@ -49,10 +51,10 @@ public:
     QVariant getValue() const;
     void setValue(const QVariant &value);
 
-    unsigned long getCount() const;
-    void setCount(unsigned long value);
-    unsigned long getItemSize() const;
-    void setItemSize(unsigned long value);
+    unsigned int getCount() const;
+    void setCount(unsigned int value);
+    unsigned int getItemSize() const;
+    void setItemSize(unsigned int value);
     int getArrayIndex() const;
     void setArrayIndex(int value);
     bool getIsValid() const;
@@ -64,11 +66,6 @@ public:
     void appendField(JsonStoredData *field);
 
     void freeData();
-    QString toString(int identCount = 0);
-    void readDataValue(StructureByteArray *binary);
-    void writeDataValue(StructureByteArray *binary);
-
-    QString ulongToHex(unsigned long value);
 
     void updateOffset();
     void reOrderFields();
@@ -77,8 +74,6 @@ public:
     JsonStoredData *getRoot();
 
     void readDataValues(StructureByteArray *binary);
-
-    unsigned long findValue(QString fullName, bool *ok);
 
     QString getSizeReference() const;
     void setSizeReference(const QString &value);
@@ -95,21 +90,19 @@ public:
     bool getResolved() const;
     void setResolved(bool value);
 
-    bool resolveReferences(StructureByteArray *binary);
+    bool resolveReferences(StructureByteArray *binary, bool *update = nullptr);
     int resolveAllReferences(StructureByteArray *binary);
-
-    JsonStoredData *createCopy();
 
     void setParent(JsonStoredData *value);
     void updateFullNames();
 
 private:
-    void updateReference(unsigned long *value, bool *fail, QString reference);
+    void updateReference(unsigned int *value, bool *fail, bool *update, QString reference);
 
-    unsigned long size = 0;
-    unsigned long offset = 0;
-    unsigned long globalOffset = 0;
-    unsigned long after = 0;
+    unsigned int size = 0;
+    unsigned int offset = 0;
+    unsigned int globalOffset = 0;
+    unsigned int after = 0;
     int type = 0;
     QString name;
     QString fullName;
@@ -117,8 +110,8 @@ private:
 
     JsonStoredData *parent = nullptr;
 
-    unsigned long count = 0;
-    unsigned long itemSize = 0;
+    unsigned int count = 0;
+    unsigned int itemSize = 0;
     int arrayIndex = -1;
     bool isValid = true;
     QString checkValue;

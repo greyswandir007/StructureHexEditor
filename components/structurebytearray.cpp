@@ -8,19 +8,19 @@ StructureByteArray::StructureByteArray() : QByteArray() {
 StructureByteArray::StructureByteArray(QByteArray arr) : QByteArray(arr) {
 }
 
-long long StructureByteArray::longLongAt(unsigned long pos) {
+long long StructureByteArray::longLongAt(unsigned int pos) {
     return static_cast<long long>(ulongLongAt(pos));
 }
 
-long StructureByteArray::longAt(unsigned long pos) {
+int StructureByteArray::longAt(unsigned int pos) {
     return static_cast<long>(ulongAt(pos));
 }
 
-short StructureByteArray::shortAt(unsigned long pos) {
+short StructureByteArray::shortAt(unsigned int pos) {
     return static_cast<short>(ushortAt(pos));
 }
 
-unsigned long long StructureByteArray::ulongLongAt(unsigned long pos) {
+unsigned long long StructureByteArray::ulongLongAt(unsigned int pos) {
     unsigned long long res;
     if (littleEndianFlag) {
         res = static_cast<unsigned long long>(ucharAt(pos));
@@ -44,23 +44,23 @@ unsigned long long StructureByteArray::ulongLongAt(unsigned long pos) {
     return res;
 }
 
-unsigned long StructureByteArray::ulongAt(unsigned long pos) {
-    unsigned long res;
+unsigned int StructureByteArray::ulongAt(unsigned int pos) {
+    unsigned int res;
     if (littleEndianFlag) {
-        res = static_cast<unsigned long>(ucharAt(pos));
-        res += static_cast<unsigned long>(ucharAt(pos + 1)) << 8;
-        res += static_cast<unsigned long>(ucharAt(pos + 2)) << 16;
-        res += static_cast<unsigned long>(ucharAt(pos + 3)) << 24;
+        res = static_cast<unsigned int>(ucharAt(pos));
+        res += static_cast<unsigned int>(ucharAt(pos + 1)) << 8;
+        res += static_cast<unsigned int>(ucharAt(pos + 2)) << 16;
+        res += static_cast<unsigned int>(ucharAt(pos + 3)) << 24;
     } else {
-        res = static_cast<unsigned long>(ucharAt(pos)) << 24;
-        res += static_cast<unsigned long>(ucharAt(pos + 1)) << 16;
-        res += static_cast<unsigned long>(ucharAt(pos + 2)) << 8;
-        res += static_cast<unsigned long>(ucharAt(pos + 3));
+        res = static_cast<unsigned int>(ucharAt(pos)) << 24;
+        res += static_cast<unsigned int>(ucharAt(pos + 1)) << 16;
+        res += static_cast<unsigned int>(ucharAt(pos + 2)) << 8;
+        res += static_cast<unsigned int>(ucharAt(pos + 3));
     }
     return res;
 }
 
-unsigned short StructureByteArray::ushortAt(unsigned long pos) {
+unsigned short StructureByteArray::ushortAt(unsigned int pos) {
     unsigned short res;
     if (littleEndianFlag) {
         res = static_cast<unsigned short>(ucharAt(pos));
@@ -73,20 +73,20 @@ unsigned short StructureByteArray::ushortAt(unsigned long pos) {
 
 }
 
-unsigned char StructureByteArray::ucharAt(unsigned long pos) {
-    return pos >= static_cast<unsigned long>(size()) ? 0 : static_cast<unsigned char>(at(static_cast<int>(pos)));
+unsigned char StructureByteArray::ucharAt(unsigned int pos) {
+    return pos >= static_cast<unsigned int>(size()) ? 0 : static_cast<unsigned char>(at(static_cast<int>(pos)));
 }
 
-float StructureByteArray::floatAt(unsigned long pos) {
+float StructureByteArray::floatAt(unsigned int pos) {
     union {
-        unsigned long ulong;
+        unsigned int ulong;
         float f;
     } converter;
     converter.ulong = ulongAt(pos);
     return converter.f;
 }
 
-double StructureByteArray::doubleAt(unsigned long pos) {
+double StructureByteArray::doubleAt(unsigned int pos) {
     union {
         unsigned long long ulongLong;
         double d;
@@ -95,22 +95,50 @@ double StructureByteArray::doubleAt(unsigned long pos) {
     return converter.d;
 }
 
-long double StructureByteArray::ldoubleAt(unsigned long pos) {
+long double StructureByteArray::ldoubleAt(unsigned int pos) {
     union {
         unsigned char uchar[10];
         long double ld;
     } converter;
-    for (unsigned long i = 0; i < 10; i++) {
+    for (unsigned int i = 0; i < 10; i++) {
         converter.uchar[i] = ucharAt(pos + i);
     }
     return converter.ld;
 }
 
-QString StructureByteArray::stringAt(unsigned long pos, unsigned long len) {
+unsigned int StructureByteArray::rgbAt(unsigned int pos) {
+    unsigned int res;
+    if (littleEndianFlag) {
+        res = static_cast<unsigned int>(ucharAt(pos));
+        res += static_cast<unsigned int>(ucharAt(pos + 1)) << 8;
+        res += static_cast<unsigned int>(ucharAt(pos + 2)) << 16;
+    } else {
+        res = static_cast<unsigned int>(ucharAt(pos)) << 16;
+        res += static_cast<unsigned int>(ucharAt(pos + 1)) << 8;
+        res += static_cast<unsigned int>(ucharAt(pos + 2));
+    }
+    return res;
+}
+
+unsigned int StructureByteArray::bgrAt(unsigned int pos) {
+    unsigned int res;
+    if (littleEndianFlag) {
+        res = static_cast<unsigned int>(ucharAt(pos)) << 16;
+        res += static_cast<unsigned int>(ucharAt(pos + 1)) << 8;
+        res += static_cast<unsigned int>(ucharAt(pos + 2));
+    } else {
+        res = static_cast<unsigned int>(ucharAt(pos));
+        res += static_cast<unsigned int>(ucharAt(pos + 1)) << 8;
+        res += static_cast<unsigned int>(ucharAt(pos + 2)) << 16;
+    }
+    return res;
+}
+
+QString StructureByteArray::stringAt(unsigned int pos, unsigned int len) {
     QString res;
     QTextCodec *codec = QTextCodec::codecForName("CP866");
-    unsigned long i = pos;
-    while (i < pos + len && i < static_cast<unsigned long>(size())) {
+    unsigned int i = pos;
+    while (i < pos + len && i < static_cast<unsigned int>(size())) {
         char c = at(static_cast<int>(i));
         if (c != 0x0D && c != 0x0A) {
             res.append(codec->toUnicode(&c, 1));
@@ -124,10 +152,10 @@ QString StructureByteArray::stringAt(unsigned long pos, unsigned long len) {
     return res;
 }
 
-QString StructureByteArray::hexAt(unsigned long pos, unsigned long len) {
+QString StructureByteArray::hexAt(unsigned int pos, unsigned int len) {
     QString res;
-    unsigned long i = pos;
-    while (i < pos + len && static_cast<unsigned long>(size())) {
+    unsigned int i = pos;
+    while (i < pos + len && static_cast<unsigned int>(size())) {
         unsigned char c = ucharAt(i);
         res.append(hexDigits[(c >> 4) & 0xF]);
         res.append(hexDigits[c & 0xF]);
@@ -136,23 +164,23 @@ QString StructureByteArray::hexAt(unsigned long pos, unsigned long len) {
     return res;
 }
 
-void StructureByteArray::setLongLongAt(unsigned long pos, long long value) {
+void StructureByteArray::setLongLongAt(unsigned int pos, long long value) {
     setUlongLongAt(pos, static_cast<unsigned long long>(value));
 }
 
-void StructureByteArray::setLongAt(unsigned long pos, long value) {
-    setUlongAt(pos, static_cast<unsigned long>(value));
+void StructureByteArray::setLongAt(unsigned int pos, int value) {
+    setUlongAt(pos, static_cast<unsigned int>(value));
 }
 
-void StructureByteArray::setShortAt(unsigned long pos, short value) {
+void StructureByteArray::setShortAt(unsigned int pos, short value) {
     setUshortAt(pos, static_cast<unsigned short>(value));
 }
 
-void StructureByteArray::setCharAt(unsigned long pos, char value) {
+void StructureByteArray::setCharAt(unsigned int pos, char value) {
     setUcharAt(pos, static_cast<unsigned char>(value));
 }
 
-void StructureByteArray::setUlongLongAt(unsigned long pos, unsigned long long value) {
+void StructureByteArray::setUlongLongAt(unsigned int pos, unsigned long long value) {
     if (littleEndianFlag) {
         setUcharAt(pos++, value & 0xFF);
         setUcharAt(pos++, (value >> 8) & 0xFF);
@@ -174,7 +202,7 @@ void StructureByteArray::setUlongLongAt(unsigned long pos, unsigned long long va
     }
 }
 
-void StructureByteArray::setUlongAt(unsigned long pos, unsigned long value) {
+void StructureByteArray::setUlongAt(unsigned int pos, unsigned int value) {
     if (littleEndianFlag) {
         setUcharAt(pos++, value & 0xFF);
         setUcharAt(pos++, (value >> 8) & 0xFF);
@@ -188,7 +216,7 @@ void StructureByteArray::setUlongAt(unsigned long pos, unsigned long value) {
     }
 }
 
-void StructureByteArray::setUshortAt(unsigned long pos, unsigned short value) {
+void StructureByteArray::setUshortAt(unsigned int pos, unsigned short value) {
     if (littleEndianFlag) {
         setUcharAt(pos++, value & 0xFF);
         setUcharAt(pos++, (value >> 8) & 0xFF);
@@ -198,24 +226,27 @@ void StructureByteArray::setUshortAt(unsigned long pos, unsigned short value) {
     }
 }
 
-void StructureByteArray::setUcharAt(unsigned long pos, unsigned char value) {
-    if (pos >= static_cast<unsigned long>(size())) {
+void StructureByteArray::setUcharAt(unsigned int pos, unsigned char value) {
+    if (pos >= static_cast<unsigned int>(size())) {
+        while (pos > static_cast<unsigned int>(size())) {
+            append('\0');
+        }
         append(static_cast<char>(value));
     } else {
         data()[pos] = static_cast<char>(value);
     }
 }
 
-void StructureByteArray::setFloatAt(unsigned long pos, float value) {
+void StructureByteArray::setFloatAt(unsigned int pos, float value) {
     union {
-        unsigned long ulong;
+        unsigned int ulong;
         float f;
     } converter;
     converter.f = value;
     setUlongAt(pos, converter.ulong);
 }
 
-void StructureByteArray::setDoubleAt(unsigned long pos, double value) {
+void StructureByteArray::setDoubleAt(unsigned int pos, double value) {
     union {
         unsigned long long ulongLong;
         double d;
@@ -224,33 +255,67 @@ void StructureByteArray::setDoubleAt(unsigned long pos, double value) {
     setUlongLongAt(pos, converter.ulongLong);
 }
 
-void StructureByteArray::setLdoubleAt(unsigned long pos, long double value) {
+void StructureByteArray::setLdoubleAt(unsigned int pos, long double value) {
     union {
         unsigned char uchar[10];
         long double ld;
     } converter;
     converter.ld = value;
-    for (unsigned long i = 0; i < 10; i++) {
+    for (unsigned int i = 0; i < 10; i++) {
         setUcharAt(pos + i, converter.uchar[i]);
     }
 }
 
-void StructureByteArray::setStringAt(unsigned long pos, QString str) {
+void StructureByteArray::setRgbAt(unsigned int pos, unsigned int value) {
+    if (littleEndianFlag) {
+        setUcharAt(pos++, value & 0xFF);
+        setUcharAt(pos++, (value >> 8) & 0xFF);
+        setUcharAt(pos++, (value >> 16) & 0xFF);
+    } else {
+        setUcharAt(pos++, (value >> 16) & 0xFF);
+        setUcharAt(pos++, (value >> 8) & 0xFF);
+        setUcharAt(pos++, value & 0xFF);
+    }
+}
+
+void StructureByteArray::setBgrAt(unsigned int pos, unsigned int value) {
+    if (littleEndianFlag) {
+        setUcharAt(pos++, (value >> 16) & 0xFF);
+        setUcharAt(pos++, (value >> 8) & 0xFF);
+        setUcharAt(pos++, value & 0xFF);
+    } else {
+        setUcharAt(pos++, value & 0xFF);
+        setUcharAt(pos++, (value >> 8) & 0xFF);
+        setUcharAt(pos++, (value >> 16) & 0xFF);
+    }
+}
+
+void StructureByteArray::setStringAt(unsigned int pos, QString str) {
     QTextCodec *codec = QTextCodec::codecForName("CP1251");
     QByteArray a = codec->fromUnicode(str);
+    if (pos >= static_cast<unsigned int>(size())) {
+        while (pos > static_cast<unsigned int>(size())) {
+            append('\0');
+        }
+    }
     for(int i = 0; i < a.length(); i++) {
-        if (pos +static_cast<unsigned long>(i) >= static_cast<unsigned long>(size())) {
+        if (pos + static_cast<unsigned int>(i) >= static_cast<unsigned int>(size())) {
             append(a.at(i));
         } else {
-            data()[pos + static_cast<unsigned long>(i)] = a.at(i);
+            data()[pos + static_cast<unsigned int>(i)] = a.at(i);
         }
     }
 }
 
-void StructureByteArray::setHexAt(unsigned long pos, QString hex) {
+void StructureByteArray::setHexAt(unsigned int pos, QString hex) {
     QString res;
-    unsigned long j = pos;
+    unsigned int j = pos;
     int i = 0;
+    if (pos >= static_cast<unsigned int>(size())) {
+        while (pos > static_cast<unsigned int>(size())) {
+            append('\0');
+        }
+    }
     while(i < hex.length()) {
         QString h = QString(hex.at(i));
         if (i + 1 < hex.length()) {
@@ -259,7 +324,7 @@ void StructureByteArray::setHexAt(unsigned long pos, QString hex) {
         bool ok;
         char val = static_cast<char>(h.toInt(&ok, 16));
         if (ok) {
-            if (j >= static_cast<unsigned long>(size())) {
+            if (j >= static_cast<unsigned int>(size())) {
                 append(val);
             } else {
                 data()[j] = val;

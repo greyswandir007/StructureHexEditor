@@ -1,4 +1,5 @@
 #include "hexeditorwindow.h"
+#include "palettedialog.h"
 #include "ui_hexeditorwindow.h"
 #include <QDebug>
 #include <QFileDialog>
@@ -48,6 +49,12 @@ HexEditorWindow::HexEditorWindow(QWidget *parent) :
             addRecentStructureFile(filename);
         }
     }
+    unsigned int *pal = PaletteDialog::getDefaultPalette();
+    currentPalette = new unsigned int[256];
+    for (int i = 0; i < 256; i++) {
+        currentPalette[i] = pal[i];
+    }
+    ui->imagePreview->setCurrentPalette(currentPalette);
 }
 
 HexEditorWindow::~HexEditorWindow() {
@@ -67,6 +74,11 @@ HexEditorWindow::~HexEditorWindow() {
     delete ui;
 }
 
+void HexEditorWindow::resizeEvent(QResizeEvent *event) {
+    QMainWindow::resizeEvent(event);
+    ui->imagePreview->updateSceneRect();
+}
+
 void HexEditorWindow::on_actionOpen_triggered() {
     QStringList files = QFileDialog::getOpenFileNames(this, tr("Select files"), lastDirectory, "*.*", nullptr,
                                                       QFileDialog::DontUseNativeDialog);
@@ -84,6 +96,12 @@ void HexEditorWindow::on_actionOpen_triggered() {
             addRecentOpenedFile(files.at(0));
             addRecentOpenedFile(files.at(1));
             lastDirectory = QFileInfo(files.at(0)).absolutePath();
+            ui->structureEditor->clearStructure();
+            ui->imageSourceBox->clear();
+            ui->imageSourceBox->addItem("File 1");
+            ui->imageSourceBox->addItem("File 2");
+            ui->imageSourceBox->setCurrentIndex(0);
+
             ui->leftFilePanel->loadFile(files.at(0));
             ui->rightFilePanel->loadFile(files.at(1));
             ui->rightFilePanel->show();
@@ -191,7 +209,7 @@ void HexEditorWindow::on_actionCopy_Right_To_Left_triggered() {
 }
 
 void HexEditorWindow::syncEdit1to2(const QModelIndex &current, const QModelIndex &prev) {
-    if (current != prev) {
+    if (current != prev && !ui->rightFilePanel->getBinaryData()->isEmpty()) {
         ui->rightFilePanel->selectionModel()
                 ->setCurrentIndex(current, QItemSelectionModel::Current | QItemSelectionModel::Select);
     }
@@ -271,6 +289,10 @@ void HexEditorWindow::addRecentStructureFile(QString filename) {
 }
 
 void HexEditorWindow::openHexFile(QString filename) {
+    ui->imageSourceBox->clear();
+    ui->imageSourceBox->addItem("File");
+    ui->imageSourceBox->setCurrentIndex(0);
+    ui->structureEditor->clearStructure();
     ui->leftFilePanel->loadFile(filename);
     ui->rightFilePanel->hide();
     ui->actionSave2->setEnabled(false);
@@ -347,7 +369,7 @@ void HexEditorWindow::on_actionSave_2_triggered() {
     on_saveStructureButton_clicked();
 }
 
-void HexEditorWindow::on_saveAsStructreButton_clicked() {
+void HexEditorWindow::on_saveAsStructureButton_clicked() {
     QString filename = QFileDialog::getSaveFileName(this, tr("Select signature file"), lastDirectory,
                                                     "JSON File (*.json)", nullptr, QFileDialog::DontUseNativeDialog);
     if (!filename.isEmpty()) {
@@ -366,7 +388,7 @@ void HexEditorWindow::on_saveAsStructreButton_clicked() {
 }
 
 void HexEditorWindow::on_actionSave_As_2_triggered() {
-    on_saveAsStructreButton_clicked();
+    on_saveAsStructureButton_clicked();
 }
 
 void HexEditorWindow::openRecentTriggered() {
@@ -383,6 +405,10 @@ void HexEditorWindow::openRecent2Triggered() {
 
 void HexEditorWindow::on_applyStructureButton_clicked() {
     ui->structureEditor->parseJSONDocument(ui->structureEdit->toPlainText());
+    QStringList list = ui->structureEditor->getBinaryList();
+    for (auto item : list) {
+        ui->imageSourceBox->addItem(item);
+    }
 }
 
 void HexEditorWindow::on_actionExit_triggered() {
@@ -391,4 +417,41 @@ void HexEditorWindow::on_actionExit_triggered() {
 
 void HexEditorWindow::on_formatButton_clicked() {
     ui->structureEdit->setText(ui->structureEditor->formatJSONDocument(ui->structureEdit->toPlainText()));
+}
+
+void HexEditorWindow::on_previewButton_clicked() {
+    ImagePreviewParams params;
+    params.depthIndex = ui->imageColorDepthBox->currentIndex();
+    params.width = ui->imageWidthSpin->value();
+    params.height = ui->imageHeightSpin->value();
+    params.itemCount = ui->imageItemCountSpin->value();
+    params.itemsInRow = ui->imageItemsInRowSpin->value();
+    params.skipBytesCount = static_cast<unsigned int>(ui->imageSkipBytesSpin->value());
+    params.gapBytesCount = static_cast<unsigned int>(ui->imageGapBytesSpin->value());
+    if (ui->imageSourceBox->currentText().compare("File") == 0
+            || ui->imageSourceBox->currentText().compare("File 1") == 0) {
+        ui->imagePreview->previewImage(params, ui->leftFilePanel->getBinaryData());
+    } else if (ui->imageSourceBox->currentText().compare("File 2") == 0) {
+        ui->imagePreview->previewImage(params, ui->rightFilePanel->getBinaryData());
+    } else {
+        JsonStoredData *data = ui->structureEditor->getStoredDataByName(ui->imageSourceBox->currentText());
+        if (data != nullptr) {
+            StructureByteArray *array = new StructureByteArray(data->getValue().toByteArray());
+            ui->imagePreview->previewImage(params, array);
+            delete array;
+        }
+    }
+}
+
+void HexEditorWindow::on_imagePaletteButton_clicked() {
+    PaletteDialog dlg(currentPalette);
+    if (dlg.exec()) {
+        delete currentPalette;
+        currentPalette = dlg.getPaletteCopy();
+        ui->imagePreview->setCurrentPalette(currentPalette);
+    }
+}
+
+void HexEditorWindow::on_imageSaveButton_clicked() {
+    ui->imagePreview->saveImage();
 }

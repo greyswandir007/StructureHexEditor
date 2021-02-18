@@ -74,10 +74,10 @@ bool HexManager::updateResult(QByteArray result, QString line, qint64 nbytes) {
 
             QString nn_count = line.mid(1, 2);
             QString aaaa_address = line.mid(3, 4);
-            QString tt_recordtype = line.mid(7, 2);
+            QString tt_recordType = line.mid(7, 2);
             QString dd_data = line.mid(9, nbytes - 11);
             QString cc_checksum = line.mid(nbytes - 2, 2);
-            QString calc_checksum = nn_count + aaaa_address + tt_recordtype + dd_data;
+            QString calc_checksum = nn_count + aaaa_address + tt_recordType + dd_data;
 
             // Нечетная длина строки с данными?
             if (dd_data.length() % 2) {
@@ -97,7 +97,7 @@ bool HexManager::updateResult(QByteArray result, QString line, qint64 nbytes) {
                 return false;
             }
 
-            quint64 recordType = tt_recordtype.toUInt(&check, 16);
+            quint64 recordType = tt_recordType.toUInt(&check, 16);
             if (!check) {
                 result.clear();
                 return false;
@@ -128,7 +128,7 @@ bool HexManager::updateResult(QByteArray result, QString line, qint64 nbytes) {
                     qDebug() << "end of HEX file";
                     return false;
                 }
-                qDebug() << "recordtype " << recordType;
+                qDebug() << "recordType " << recordType;
                 return true;
             }
 
@@ -158,15 +158,13 @@ QByteArray HexManager::getBytes(bool *check, QString data) {
     for (int i = 0; i < data.length() / 2; i++) {
         QString sb = data.mid(i * 2, 2);
         quint8 byte = static_cast<quint8>(sb.toUInt(check, 16));
-        if (check) {
-            bytesLine.append(static_cast<char>(byte));
-        } else {
+        if (!check) {
             break;
         }
+        bytesLine.append(static_cast<char>(byte));
     }
     return bytesLine;
 }
-
 
 QStringList HexManager::bin2Hex(QByteArray binary, quint8 cols) {
         quint64 bytes = static_cast<quint64>(binary.size());

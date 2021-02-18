@@ -36,7 +36,10 @@ SOURCES += \
     structureeditor.cpp \
     components/jsontreemodel.cpp \
     components/jsonstoreddata.cpp \
-    components/structurebytearray.cpp
+    components/structurebytearray.cpp \
+    components/jsonstoreddatahelper.cpp \
+    components/mainview.cpp \
+    palettedialog.cpp
 
 HEADERS += \
         hexeditorwindow.h \
@@ -49,13 +52,18 @@ HEADERS += \
     structureeditor.h \
     components/jsontreemodel.h \
     components/jsonstoreddata.h \
-    components/structurebytearray.h
+    components/structurebytearray.h \
+    components/jsonstoreddatahelper.h \
+    components/mainview.h \
+    palettedialog.h \
+    components/imagepreviewparams.h
 
 FORMS += \
         hexeditorwindow.ui \
     hexeditor.ui \
     components/propertiesdialog.ui \
-    structureeditor.ui
+    structureeditor.ui \
+    palettedialog.ui
 
 # Default rules for deployment.
 qnx: target.path = /tmp/$${TARGET}/bin

@@ -1,8 +1,10 @@
+#include "jsonstoreddatahelper.h"
 #include "jsontreemodel.h"
 
 JsonTreeModel::JsonTreeModel(QObject *parent) :
     QAbstractTableModel(parent) {
-    headers << tr("Name") << tr("Full Name") << tr("Offset") << tr("Global Offset") << tr("Size") << tr("Value");
+    headers << tr("Name") << tr("Full Name") << tr("Offset") << tr("Global Offset") << tr("Size") << tr("Value")
+            << tr("Type") << tr("Count") << tr("Item Size") << tr("References");
 }
 
 void JsonTreeModel::setRoot(JsonStoredData *value) {
@@ -19,10 +21,42 @@ QVariant JsonTreeModel::data(const QModelIndex &index, int role) const {
         switch (index.column()) {
         case 0: return data->getName();
         case 1: return data->getFullName();
-        case 2: return QString().sprintf("%lu", data->getOffset());
-        case 3: return QString().sprintf("%lu", data->getGlobalOffset());
-        case 4: return QString().sprintf("%lu", data->getSize());
-        case 5: return data->getValue();
+        case 2: return JsonStoredDataHelper::ulongToHex(data->getOffset());
+        case 3: return JsonStoredDataHelper::ulongToHex(data->getGlobalOffset());
+        case 4: return QString().sprintf("%u", data->getSize());
+        case 5:
+            if (data->getValue().toByteArray().size() > 100) {
+                return data->getValue().toByteArray().mid(0, 20);
+            } else {
+                return data->getValue();
+            }
+        case 6: return jsonTypes.at(data->getType());
+        case 7: return QString().sprintf("%u", data->getCount());
+        case 8: return QString().sprintf("%u", data->getItemSize());
+        case 9:
+            QString references;
+            if (!data->getSizeReference().isEmpty()) {
+                references = "size: " + data->getSizeReference();
+            }
+            if (!data->getOffsetReference().isEmpty()) {
+                if (!references.isEmpty()) {
+                    references += ", ";
+                }
+                references += "offset: " + data->getOffsetReference();
+            }
+            if (!data->getCountReference().isEmpty()) {
+                if (!references.isEmpty()) {
+                    references += ", ";
+                }
+                references += "count: " + data->getCountReference();
+            }
+            if (!data->getItemSizeReference().isEmpty()) {
+                if (!references.isEmpty()) {
+                    references += ", ";
+                }
+                references += "itemSize: " + data->getItemSizeReference();
+            }
+            return references;
         }
     }
     return QVariant();
@@ -62,7 +96,7 @@ Qt::ItemFlags JsonTreeModel::flags(const QModelIndex &index) const {
     if (!index.isValid()) {
         return Qt::ItemIsEnabled;
     }
-    return Qt::ItemIsEnabled | Qt::ItemIsSelectable;
+    return Qt::ItemIsEnabled | Qt::ItemIsSelectable | Qt::ItemIsEditable;
 }
 
 QModelIndex JsonTreeModel::index(int row, int column, const QModelIndex &parent) const {
@@ -98,7 +132,7 @@ QModelIndex JsonTreeModel::parent(const QModelIndex &index) const {
     if (parentItem->getParent() != nullptr) {
         row = parentItem->getParent()->getFields().indexOf(parentItem);
     }
-    return createIndex(row, index.column(), parentItem);
+    return createIndex(row, 0, parentItem);
 }
 
 void JsonTreeModel::updateData() {

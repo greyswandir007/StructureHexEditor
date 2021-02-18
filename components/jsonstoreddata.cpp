@@ -1,4 +1,5 @@
 #include "jsonstoreddata.h"
+#include "jsonstoreddatahelper.h"
 #include <QDebug>
 
 JsonStoredData::JsonStoredData(JsonStoredData *parent) {
@@ -15,19 +16,32 @@ JsonStoredData::JsonStoredData(JsonStoredData *parent, int type, QString name) {
     if (parent != nullptr) {
         resolved = parent->resolved;
     }
+    if (type >= CHAR_TYPE && type <= LDOUBLE_TYPE) {
+        size = fixedTypesSize[type];
+    }
 }
 
-JsonStoredData::JsonStoredData(JsonStoredData *parent, unsigned long offset, int type, QString name, int arrayIndex, unsigned long size,
-                               unsigned long count) {
+JsonStoredData::JsonStoredData(JsonStoredData *parent, unsigned int offset, int type, QString name, int arrayIndex, unsigned int size,
+                               unsigned int count) {
     this->size = size;
     this->offset = offset;
     this->type = type;
     this->name = name;
     this->count = count;
     this->arrayIndex = arrayIndex;
+    if (type >= CHAR_TYPE && type <= LDOUBLE_TYPE) {
+        this->size = fixedTypesSize[type];
+    }
     if (parent != nullptr) {
         if (arrayIndex >= 0) {
-            this->offset = parent->itemSize * static_cast<unsigned long>(arrayIndex);
+            if (parent->itemSize != 0) {
+                this->offset = parent->itemSize * static_cast<unsigned int>(arrayIndex);
+            } else {
+                this->offset = 0;
+                for (int i = 0; i < arrayIndex && i < parent->fields.size(); i++) {
+                    this->offset += fields.at(i)->getSize();
+                }
+            }
         }
         this->parent = parent;
         globalOffset = parent->globalOffset + this->offset;
@@ -37,35 +51,35 @@ JsonStoredData::JsonStoredData(JsonStoredData *parent, unsigned long offset, int
     after = globalOffset + size;
 }
 
-unsigned long JsonStoredData::getSize() const {
+unsigned int JsonStoredData::getSize() const {
     return size;
 }
 
-void JsonStoredData::setSize(unsigned long value) {
+void JsonStoredData::setSize(unsigned int value) {
     size = value;
 }
 
-unsigned long JsonStoredData::getOffset() const {
+unsigned int JsonStoredData::getOffset() const {
     return offset;
 }
 
-void JsonStoredData::setOffset(unsigned long value) {
+void JsonStoredData::setOffset(unsigned int value) {
     offset = value;
 }
 
-unsigned long JsonStoredData::getGlobalOffset() const {
+unsigned int JsonStoredData::getGlobalOffset() const {
     return globalOffset;
 }
 
-void JsonStoredData::setGlobalOffset(unsigned long value) {
+void JsonStoredData::setGlobalOffset(unsigned int value) {
     globalOffset = value;
 }
 
-unsigned long JsonStoredData::getAfter() const {
+unsigned int JsonStoredData::getAfter() const {
     return after;
 }
 
-void JsonStoredData::setAfter(unsigned long value) {
+void JsonStoredData::setAfter(unsigned int value) {
     after = value;
 }
 
@@ -101,19 +115,19 @@ void JsonStoredData::setValue(const QVariant &value) {
     this->value = value;
 }
 
-unsigned long JsonStoredData::getCount() const {
+unsigned int JsonStoredData::getCount() const {
     return count;
 }
 
-void JsonStoredData::setCount(unsigned long value) {
+void JsonStoredData::setCount(unsigned int value) {
     count = value;
 }
 
-unsigned long JsonStoredData::getItemSize() const {
+unsigned int JsonStoredData::getItemSize() const {
     return itemSize;
 }
 
-void JsonStoredData::setItemSize(unsigned long value) {
+void JsonStoredData::setItemSize(unsigned int value) {
     itemSize = value;
 }
 
@@ -158,188 +172,29 @@ void JsonStoredData::freeData() {
     fields.clear();
 }
 
-QString JsonStoredData::toString(int identCount) {
-    QString result;
-    QString smallIdent = QString().fill(' ', identCount);
-    result = smallIdent + "{";
-    QString ident = "\n" + smallIdent + "    ";
-    result += ident + QString("\"size\":%1").arg(size) + ",";
-    result += ident + "\"offset\":\"" + ulongToHex(offset) + "\",";
-    result += ident + "\"globalOffset\":\"" + ulongToHex(globalOffset) + "\",";
-    result += ident + "\"after\":\"" + ulongToHex(after) + "\",";
-    result += ident + "\"type\":\"" + jsonTypes.at(type) + "\",";
-    result += ident + "\"name\":\"" + name + "\",";
-    result += ident + "\"fullName\":\"" + fullName + "\",";
-    result += ident + "\"value\":\"" + value.toString() + "\",";
-
-    result += ident + QString("\"count\":%1").arg(count) + ",";
-    result += ident + "\"itemSize\":\"" + ulongToHex(itemSize) + "\",";
-    result += ident + QString("\"arrayIndex\":%1").arg(arrayIndex) + ",";
-    result += ident + "\"isValid\":\"" + (isValid ? "true" : "false") + "\",";
-    result += ident + "\"checkValue\":\"" + checkValue + "\",";
-    if (fields.isEmpty()) {
-        result += ident + "fields:[]";
-    } else {
-        result += ident + "fields:[\n";
-        for (int i = 0; i < fields.size(); i++) {
-            result += fields[i]->toString(identCount + 8);
-            if (i < fields.size() - 1) {
-                result += ",\n";
-            }
-        }
-        result += ident + "]";
-    }
-    result += "\n" + smallIdent + "}";
-    return result;
-}
-
-void JsonStoredData::readDataValue(StructureByteArray *binary) {
-    if (!resolved) {
-        return;
-    }
-    for (JsonStoredData *field : fields) {
-        field->readDataValue(binary);
-    }
-    switch(type) {
-    case SIGNATURE_TYPE:
-        if (checkValue.startsWith("0x")) {
-            unsigned long sigSize = static_cast<unsigned long>((checkValue.size() - 2) / 2);
-            QString hex = "0x" + binary->hexAt(globalOffset, sigSize);
-            value = hex;
-            isValid = hex.compare(checkValue, Qt::CaseInsensitive) == 0;
-        } else {
-            isValid = false;
-        }
-        break;
-    case CHAR_TYPE:
-        value = static_cast<int>(binary->at(static_cast<int>(globalOffset)));
-        size = 1;
-        break;
-    case UCHAR_TYPE:
-        value = binary->ucharAt(globalOffset);
-        size = 1;
-        break;
-    case SHORT_TYPE:
-        value = binary->shortAt(globalOffset);
-        size = 2;
-        break;
-    case USHORT_TYPE:
-        value = binary->ushortAt(globalOffset);
-        size = 2;
-        break;
-    case LONG_TYPE:
-        value = static_cast<int>(binary->longAt(globalOffset));
-        size = 4;
-        break;
-    case ULONG_TYPE:
-        value = static_cast<unsigned int>(binary->ulongAt(globalOffset));
-        size = 4;
-        break;
-    case LONG_LONG_TYPE:
-        value = QString().sprintf("%lli", binary->longLongAt(globalOffset));
-        size = 8;
-        break;
-    case ULONG_LONG_TYPE:
-        value = QString().sprintf("%llu", binary->ulongLongAt(globalOffset));
-        size = 8;
-        break;
-    case FLOAT_TYPE:
-        value = binary->floatAt(globalOffset);
-        size = 4;
-        break;
-    case DOUBLE_TYPE:
-        value = binary->doubleAt(globalOffset);
-        size = 8;
-        break;
-    case LDOUBLE_TYPE:
-        value = QString().sprintf("%lg", binary->ldoubleAt(globalOffset));
-        size = 10;
-        break;
-    case STRING_TYPE: {
-        value = binary->stringAt(globalOffset, size);
-        break;
-    }
-    case HEX_TYPE: {
-        value = binary->hexAt(globalOffset, size);
-        break;
-    }
-    default: break;
-    }
-    updateOffset();
-}
-
-void JsonStoredData::writeDataValue(StructureByteArray *binary) {
-    switch(type) {
-    case CHAR_TYPE:
-        binary->setCharAt(globalOffset, static_cast<char>(value.toInt()));
-        break;
-    case UCHAR_TYPE:
-        binary->setUcharAt(globalOffset, static_cast<unsigned char>(value.toInt()));
-        break;
-    case SHORT_TYPE:
-        binary->setShortAt(globalOffset, static_cast<short>(value.toInt()));
-        break;
-    case USHORT_TYPE:
-        binary->setUshortAt(globalOffset, static_cast<unsigned short>(value.toInt()));
-        break;
-    case LONG_TYPE:
-        binary->setLongAt(globalOffset, value.toString().toLong());
-        break;
-    case ULONG_TYPE:
-        binary->setUlongAt(globalOffset, value.toString().toULong());
-        break;
-    case LONG_LONG_TYPE:
-        binary->setLongLongAt(globalOffset, value.toString().toLongLong());
-        break;
-    case ULONG_LONG_TYPE:
-        binary->setUlongLongAt(globalOffset, value.toString().toULongLong());
-        break;
-    case FLOAT_TYPE:
-        binary->setFloatAt(globalOffset, value.toFloat());
-        break;
-    case DOUBLE_TYPE:
-        binary->setDoubleAt(globalOffset, value.toDouble());
-        break;
-    case LDOUBLE_TYPE:
-        //TODO fix precision
-        binary->setLdoubleAt(globalOffset, value.toString().toDouble());
-        break;
-    case STRING_TYPE: {
-        binary->setStringAt(globalOffset, value.toString());
-        break;
-    }
-    case HEX_TYPE: {
-        binary->setHexAt(globalOffset, value.toString());
-        break;
-    }
-    default: break;
-    }
-}
-
-QString JsonStoredData::ulongToHex(unsigned long value) {
-    int size = value < 256 ? 2 : value < 65536 ? 4 : 8;
-    return QString("0x%1").arg(value, size, 16, QChar('0'));
-}
-
 void JsonStoredData::updateOffset() {
     if (!resolved) {
         return;
     }
-    if (type == OBJECT_TYPE && !fields.isEmpty()) {
-        JsonStoredData *last = fields.at(0);
-        for(JsonStoredData *data : fields) {
-            if (data->offset > last->offset) {
+    if ((type == OBJECT_TYPE || (type == ARRAY_TYPE && itemSize == 0)) && !fields.isEmpty() && sizeReference.isEmpty()) {
+        auto last = fields.at(0);
+        for(auto data : fields) {
+            if (data->getOffset() > last->getOffset()) {
                 last = data;
             }
         }
-        size = last->offset + last->size;
-    }
-    if (type == ARRAY_TYPE) {
-        size = itemSize * count;
+        size = last->getOffset() + last->getSize();
     }
     if (parent != nullptr) {
-        if (arrayIndex >= 0) {
-            offset = parent->itemSize * static_cast<unsigned long>(arrayIndex);
+        if (arrayIndex >= 0 && offsetReference.isEmpty()) {
+            if (parent->itemSize == 0) {
+                offset = 0;
+                for (int i = 0; i < arrayIndex && i < parent->getFields().size(); i++) {
+                    offset += parent->getFields().at(i)->getSize();
+                }
+            } else {
+                offset = parent->itemSize * static_cast<unsigned int>(arrayIndex);
+            }
         }
         globalOffset = parent->globalOffset + offset;
     }
@@ -358,60 +213,14 @@ JsonStoredData *JsonStoredData::getParent() const {
 }
 
 JsonStoredData *JsonStoredData::getRoot() {
-    if (parent != nullptr) {
-        return parent->getRoot();
-    }
-    return this;
+    return parent == nullptr ? this : parent->getRoot();
 }
 
 void JsonStoredData::readDataValues(StructureByteArray *binary) {
-    readDataValue(binary);
+    JsonStoredDataHelper::readDataValue(this, binary);
     for(JsonStoredData *field : fields) {
         field->readDataValues(binary);
     }
-}
-
-unsigned long JsonStoredData::findValue(QString fullName, bool *ok) {
-    QStringList lst = fullName.split(".");
-    if (lst.isEmpty()) {
-        *ok = false;
-        return 0;
-    }
-    int ref = objectReferenceFields.indexOf(lst.last());
-    if (ref != -1) {
-        lst.removeLast();
-    }
-    JsonStoredData *current = getRoot();
-    for (int i = 0; i < lst.size(); i++) {
-        JsonStoredData *found = nullptr;
-        for (JsonStoredData *field : current->fields) {
-            if (field->name.compare(lst.at(i)) == 0) {
-                found = field;
-                break;
-            }
-        }
-        current = found;
-        if (found == nullptr) {
-            break;
-        }
-    }
-    if (current == nullptr) {
-        *ok = false;
-        return 0;
-    }
-    *ok = true;
-    if (ref != -1) {
-        switch(ref) {
-        case OFFSET_FIELD: return current->getOffset();
-        case SIZE_FIELD: return current->getSize();
-        case GLOBAL_OFFSET_FIELD: return current->getGlobalOffset();
-        case AFTER_FIELD: return current->getAfter();
-        case COUNT_FIELD: return current->getCount();
-        case ITEM_SIZE_FIELD: return current->getItemSize();
-        default: break;
-        }
-    }
-    return current->value.toUInt(ok);
 }
 
 QString JsonStoredData::getSizeReference() const {
@@ -466,57 +275,51 @@ void JsonStoredData::setResolved(bool value) {
     resolved = value;
 }
 
-bool JsonStoredData::resolveReferences(StructureByteArray *binary) {
-    if (resolved) {
-        if (binary != nullptr) {
-            readDataValue(binary);
-        }
-        return true;
-    }
+bool JsonStoredData::resolveReferences(StructureByteArray *binary, bool *update) {
     bool fail = false;
-    updateReference(&size, &fail, sizeReference);
-    updateReference(&offset, &fail, offsetReference);
-    updateReference(&count, &fail, countReference);
-    updateReference(&itemSize, &fail, itemSizeReference);
+    bool upd = false;
+    updateReference(&size, &fail, &upd, sizeReference);
+    updateReference(&offset, &fail, &upd, offsetReference);
+    updateReference(&count, &fail, &upd, countReference);
+    updateReference(&itemSize, &fail, &upd, itemSizeReference);
+    if (update != nullptr) {
+        *update = upd;
+    }
     if (fail) {
-        qDebug() << "fail to resolve for " + fullName;
         return false;
-    } else {
-        qDebug() << "resolved for " + fullName;
-        resolved = true;
+    }
+    resolved = true;
+    if (upd) {
         updateOffset();
         if (type == ARRAY_TYPE) {
             if (fields.size() == 1 && count != 1) {
                 fields[0]->updateOffset();
                 fields[0]->resolveReferences(binary);
-                for (unsigned long i = 1; i < count; i++) {
-                    auto field = fields[0]->createCopy();
+                for (unsigned int i = 1; i < count; i++) {
+                    auto field = JsonStoredDataHelper::createCopy(fields[0]);
                     field->setArrayIndex(static_cast<int>(i));
                     field->updateOffset();
-                    field->resolveReferences(binary);
                     field->setName(QString("item[%1]").arg(i));
                     field->updateFullNames();
+                    field->resolveReferences(binary);
                     fields.append(field);
                 }
             }
         }
-        if (binary != nullptr) {
-            readDataValue(binary);
-        }
-        return true;
     }
+    if (binary != nullptr) {
+        JsonStoredDataHelper::readDataValue(this, binary);
+    }
+    return true;
 }
 
 int JsonStoredData::resolveAllReferences(StructureByteArray *binary) {
     int count = 0;
-    if (!resolved) {
-        if (resolveReferences(binary)) {
+    bool update = false;
+    if (resolveReferences(binary, &update)) {
+        if (update) {
             count++;
-            for (auto field : fields) {
-                count += field->resolveAllReferences(binary);
-            }
         }
-    } else {
         for (auto field : fields) {
             count += field->resolveAllReferences(binary);
         }
@@ -524,36 +327,15 @@ int JsonStoredData::resolveAllReferences(StructureByteArray *binary) {
     return count;
 }
 
-JsonStoredData *JsonStoredData::createCopy() {
-    JsonStoredData *copied = new JsonStoredData(parent, offset, type, name, arrayIndex, size, count);
-    copied->setGlobalOffset(globalOffset);
-    copied->setFullName(fullName);
-    copied->setAfter(after);
-    copied->setValue(value);
-    copied->setItemSize(itemSize);
-    copied->setIsValid(isValid);
-    copied->setCheckValue(checkValue);
-    copied->setSizeReference(sizeReference);
-    copied->setOffsetReference(offsetReference);
-    copied->setCountReference(countReference);
-    copied->setItemSizeReference(itemSizeReference);
-    copied->setResolved(resolved);
-    for (auto field : fields) {
-        auto f = field->createCopy();
-        f->setParent(copied);
-        copied->appendField(f);
-    }
-    return copied;
-}
-
-void JsonStoredData::updateReference(unsigned long *value, bool *fail, QString reference) {
+void JsonStoredData::updateReference(unsigned int *value, bool *fail, bool *update, QString reference) {
     if (!reference.isEmpty()) {
         bool ok = false;
-        unsigned long v = findValue(reference, &ok);
-        if (ok) {
-            *value = v;
-        } else {
+        unsigned int v = JsonStoredDataHelper::findValue(this, reference, &ok);
+        if (!ok) {
             *fail = true;
+        } else if (*value != v) {
+            *value = v;
+            *update = true;
         }
     }
 }

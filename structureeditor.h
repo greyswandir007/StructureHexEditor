@@ -22,6 +22,13 @@ public:
     void parseJSONDocument(QString json);
     QString formatJSONDocument(QString json);
     void setHexEditor(HexEditor *hexEditor);
+    void clearStructure();
+
+    QStringList getBinaryList();
+    JsonStoredData *getStoredDataByName(QString name);
+
+private slots:
+    void on_structureView_customContextMenuRequested(const QPoint &pos);
 
 private:
     QStringList addExtensions(const QJsonArray &array);
