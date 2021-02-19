@@ -3,11 +3,15 @@
 
 #include <QMainWindow>
 
+#include "components/jsonhighlighter.h"
+#include "components/structurenameditem.h"
+
 namespace Ui {
 class HexEditorWindow;
 }
 
 class HexEditor;
+class StructureByteArray;
 
 class HexEditorWindow : public QMainWindow {
     Q_OBJECT
@@ -15,6 +19,7 @@ class HexEditorWindow : public QMainWindow {
 public:
     explicit HexEditorWindow(QWidget *parent = nullptr);
     ~HexEditorWindow();
+    void resizeEvent(QResizeEvent* event);
 
 private slots:
     void on_actionOpen_triggered();
@@ -34,18 +39,22 @@ private slots:
     void on_actionOpen_2_triggered();
     void on_saveStructureButton_clicked();
     void on_actionSave_2_triggered();
-    void on_saveAsStructreButton_clicked();
+    void on_saveAsStructureButton_clicked();
     void on_actionSave_As_2_triggered();
     void openRecentTriggered();
     void openRecent2Triggered();
     void on_applyStructureButton_clicked();
-
     void on_actionExit_triggered();
-
-    void on_formatButton_clicked();
+    void on_formatStructureButton_clicked();
+    void on_previewButton_clicked();
+    void on_imagePaletteButton_clicked();
+    void on_imageSaveButton_clicked();
+    void on_imageSaveRawButton_clicked();
+    void on_actionApply_Structure_triggered();
+    void on_actionFormat_Structure_triggered();
 
 private:
-    static const long MAX_OFFSET = 10000000;
+    static const int MAX_OFFSET = 10000000;
 
     int execOffsetDialog(QString header, int size, int *value);
     void copyData(HexEditor *from, HexEditor *to);
@@ -59,6 +68,11 @@ private:
     QString structureFilename = "";
     QStringList recentFilePaths;
     QStringList recentStructurePaths;
+    unsigned int *currentPalette;
+
+    QList<StructureNamedItem> structureNamedItems;
+
+    JsonHighlighter *highlighter = nullptr;
 };
 
 #endif // HEXEDITORWINDOW_H

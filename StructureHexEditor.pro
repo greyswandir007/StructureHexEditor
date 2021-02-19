@@ -33,10 +33,14 @@ SOURCES += \
     components/propertiesdialog.cpp \
     components/propertiesmodel.cpp \
     components/propertydelegate.cpp \
-    components/bbytearray.cpp \
     structureeditor.cpp \
     components/jsontreemodel.cpp \
-    components/jsonstoreddatahelper.cpp
+    components/jsonstoreddata.cpp \
+    components/structurebytearray.cpp \
+    components/jsonstoreddatahelper.cpp \
+    components/mainview.cpp \
+    palettedialog.cpp \
+    components/jsonhighlighter.cpp
 
 HEADERS += \
         hexeditorwindow.h \
@@ -46,17 +50,23 @@ HEADERS += \
     components/propertiesdialog.h \
     components/propertiesmodel.h \
     components/propertydelegate.h \
-    components/bbytearray.h \
     structureeditor.h \
     components/jsontreemodel.h \
     components/jsonstoreddata.h \
-    components/jsonstoreddatahelper.h
+    components/structurebytearray.h \
+    components/jsonstoreddatahelper.h \
+    components/mainview.h \
+    palettedialog.h \
+    components/imagepreviewparams.h \
+    components/structurenameditem.h \
+    components/jsonhighlighter.h
 
 FORMS += \
         hexeditorwindow.ui \
     hexeditor.ui \
     components/propertiesdialog.ui \
-    structureeditor.ui
+    structureeditor.ui \
+    palettedialog.ui
 
 # Default rules for deployment.
 qnx: target.path = /tmp/$${TARGET}/bin

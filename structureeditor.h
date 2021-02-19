@@ -3,12 +3,13 @@
 
 #include <QWidget>
 
+#include <components/jsontreemodel.h>
+
 namespace Ui {
 class StructureEditor;
 }
 
 class HexEditor;
-struct JsonStoredData;
 
 class StructureEditor : public QWidget
 {
@@ -21,17 +22,26 @@ public:
     void parseJSONDocument(QString json);
     QString formatJSONDocument(QString json);
     void setHexEditor(HexEditor *hexEditor);
+    void clearStructure();
+
+    QList<JsonStoredData *> getBinaryList();
+    JsonStoredData *getStoredDataByName(QString name);
+
+    void saveStoredData(JsonStoredData *data);
+
+private slots:
+    void on_structureView_customContextMenuRequested(const QPoint &pos);
 
 private:
-    QJsonArray addExtensions(const QJsonArray &array);
-    QJsonValue checkSignature(QString signature, unsigned long baseOffset = 0);
-    QJsonObject parseKeys(const QJsonObject &jsonObject, unsigned long baseOffset = 0, const QStringList &keys = QStringList());
-    QJsonValue parseObject(const QJsonObject &object, unsigned long baseOffset = 0);
+    QStringList addExtensions(const QJsonArray &array);
+    void parseObject(const QJsonObject &object, JsonStoredData *data, const QStringList &keys = QStringList());
+    void parseValue(const QJsonObject &object, QString name, JsonStoredData *data, int arrayIndex = -1);
 
     Ui::StructureEditor *ui;
     HexEditor *hexEditor;
     QTextCodec *utf8Codec;
     JsonStoredData *jsonStoredData = nullptr;
+    JsonTreeModel *model;
 };
 
 #endif // STRUCTUREEDITOR_H

@@ -55,58 +55,43 @@ int HexModel::getAddr(QModelIndex &index) {
 }
 
 QVariant HexModel::data(const QModelIndex &index, int role) const {
-    if (hexEditor->getBinaryData()->size() == 0) {
-        int row = index.row();
-        int col = index.column();
-        if (role == Qt::DisplayRole) {
-            if (row == 0 && col == 1) {
-                return QString("");
-            }
-            if (row == 0 && col == 1) {
-                return QString("0x0000:0000");
-            }
-        }
-
-    } else {
-        int row = index.row();
-        int col = index.column();
+    if (hexEditor->getBinaryData()->size() > 0) {
+        unsigned int row = static_cast<unsigned int>(index.row());
+        unsigned int col = static_cast<unsigned int>(index.column());
 
         // Вот здесь отрисовывать ASCII составляющую
-        if (role == Qt::DecorationRole) {            
+        if (role == Qt::DecorationRole) {
         }
 
-        int columnCount = hexEditor->getColumnCount();
+        unsigned int columnCount = hexEditor->getColumnCount();
         if (role == Qt::DisplayRole || role == Qt::EditRole) {
             if (col > 0) {
                 // Последний столбец - это уже ASCII, тут пустышка
                 if (col == 1 + columnCount) {
                     return hexEditor->getBinaryData()->mid(row * columnCount, columnCount);
                 }
-                unsigned long   position = (row * columnCount) + col - 1;
-                if (position < (unsigned long)hexEditor->getBinaryData()->size()) {
-                    quint8          byte = hexEditor->getBinaryData()->at(position);
-                    QString         result;
-                    return          result.sprintf("%02X", byte);
+                unsigned long position = (row * columnCount) + col - 1;
+                if (position < (unsigned long) hexEditor->getBinaryData()->size()) {
+                    quint8 byte = hexEditor->getBinaryData()->at(position);
+                    QString result;
+                    return result.sprintf("%02X", byte);
                 }
-                return          QString("xx");
+                return QString("xx");
             } else {
-                unsigned long addr_high = ((row * columnCount) & 0xFFFF0000) >> 16;
-                unsigned long addr_low = (row * columnCount) & 0xFFFF;
+                unsigned int addr_high = ((row * columnCount) & 0xFFFF0000) >> 16;
+                unsigned int addr_low = (row * columnCount) & 0xFFFF;
 
-                QString result;
-
-                return result.sprintf("%04X:%04X", (unsigned int)addr_high, (unsigned int)addr_low);
+                return QString().sprintf("%04X:%04X", addr_high, addr_low);
             }
         }
     }
-
     return QVariant();
 }
 
 
 void HexModel::updateData() {
     QModelIndex zero_index = createIndex(0, 0);
-    QModelIndex end_index = createIndex(this->rowCount(), 10);
+    QModelIndex end_index = createIndex(this->rowCount(), columnCount());
 
     emit layoutAboutToBeChanged();
     emit layoutChanged();
@@ -123,7 +108,7 @@ bool HexModel::setData(const QModelIndex & index, const QVariant & value, int ro
         int row = index.row();
         int col = index.column();
 
-        unsigned long position = (row * hexEditor->getColumnCount()) + col - 1;
+        unsigned int position = (row * hexEditor->getColumnCount()) + col - 1;
 
         QString new_value = value.toString();
         if (new_value.length() != 2)
@@ -149,7 +134,7 @@ Qt::ItemFlags HexModel::flags(const QModelIndex &index) const {
         return Qt::NoItemFlags;
     }
 
-    long   position = (row * hexEditor->getColumnCount()) + col - 1;
+    long position = (row * hexEditor->getColumnCount()) + col - 1;
     if (position < hexEditor->getBinaryData()->size()) {
             return Qt::ItemIsEditable | QAbstractTableModel::flags(index);
     } else {
@@ -182,7 +167,6 @@ HexItemDelegate::HexItemDelegate(HexEditor *parent) {
 
 void HexItemDelegate::paint(QPainter * painter, const QStyleOptionViewItem & option, const QModelIndex & index) const {
     int     row, col, p_cols, p_row, p_col;
-
     row = index.row();
     col = index.column();
     p_cols = hexEditor->getColumnCount();
@@ -205,7 +189,7 @@ void HexItemDelegate::paint(QPainter * painter, const QStyleOptionViewItem & opt
         QBrush  brush;
 
         //Если нужно сравнивать с другой панелью, тo, пропустив нулевой столбец...
-        if (col > 0 && hexEditor->getCompareData()) {
+        if (col > 0 && hexEditor->getCompareData() != nullptr) {
             int position = index.row() * hexEditor->getColumnCount() + index.column() - 1;
             int dataSize = std::min(hexEditor->getBinaryData()->size(), hexEditor->getCompareData()->size());
             pen.setColor(QColor(0, 150, 0));
