@@ -18,6 +18,8 @@ private:
     struct  HighlightingRule  {
         QRegularExpression pattern;
         QTextCharFormat format;
+        int startOffset = 0;
+        int lengthReduce = 0;
     };
     QVector<HighlightingRule> highlightingRules;
 
