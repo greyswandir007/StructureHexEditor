@@ -436,6 +436,12 @@
             <property name="maximum">
              <number>999999999</number>
             </property>
+            <property name="value">
+             <number>0</number>
+            </property>
+            <property name="displayIntegerBase">
+             <number>10</number>
+            </property>
            </widget>
           </item>
           <item>
@@ -644,6 +650,8 @@
     <addaction name="actionFind"/>
     <addaction name="actionLeftToRight"/>
     <addaction name="actionCopy_Right_To_Left"/>
+    <addaction name="separator"/>
+    <addaction name="actionGo_to_address"/>
    </widget>
    <widget class="QMenu" name="menuSettings">
     <property name="title">
@@ -909,6 +917,11 @@
   <action name="actionFormat_Structure">
    <property name="text">
     <string>Format Structure</string>
+   </property>
+  </action>
+  <action name="actionGo_to_address">
+   <property name="text">
+    <string>Go to address</string>
    </property>
   </action>
  </widget>

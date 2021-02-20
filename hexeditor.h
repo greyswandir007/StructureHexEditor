@@ -52,8 +52,8 @@ public:
     void setCompareData(StructureByteArray *compareData);
     StructureByteArray *getCompareData();
 
-    unsigned int getColumnCount() const;
-    void setColumnCount(unsigned int value);
+    int getColumnCount() const;
+    void setColumnCount(int value);
     int getResizeMode() const;
     void setResizeMode(int value);
 
@@ -61,6 +61,7 @@ public:
     StructureByteArray getBinaryDataByIndex(int offset, int length);
 
     void setBinaryData(QByteArray data);
+    void goToAddress(unsigned int address);
 
 signals:
 
@@ -77,7 +78,7 @@ private:
     bool exported;
     StructureByteArray binaryData;
     StructureByteArray *compareData;
-    unsigned int columnCount;
+    int columnCount;
     int resizeMode;
     QString filename;
     int charWidth;

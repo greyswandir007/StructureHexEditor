@@ -265,7 +265,7 @@ StructureByteArray HexEditor::selectedData() {
 }
 
 unsigned int HexEditor::getAddress(int row, int col) {
-    return static_cast<unsigned int>(row * columnCount + col - 1);
+    return static_cast<unsigned int>(row * columnCount) + static_cast<unsigned int>(col) - 1;
 }
 
 unsigned int HexEditor::getCurrentAddress() {
@@ -288,11 +288,11 @@ StructureByteArray *HexEditor::getCompareData() {
     return compareData;
 }
 
-unsigned int HexEditor::getColumnCount() const {
+int HexEditor::getColumnCount() const {
     return columnCount;
 }
 
-void HexEditor::setColumnCount(unsigned int value) {
+void HexEditor::setColumnCount(int value) {
     columnCount = value;
 }
 
@@ -306,7 +306,7 @@ void HexEditor::setResizeMode(int value) {
 }
 
 StructureByteArray HexEditor::getBinaryDataByIndex(const QModelIndex &index, int length) {
-    return getBinaryDataByIndex((index.row() * columnCount) + index.column() - 1, length);
+    return getBinaryDataByIndex((index.row() * static_cast<int>(columnCount)) + index.column() - 1, length);
 }
 
 StructureByteArray HexEditor::getBinaryDataByIndex(int offset, int length) {
@@ -317,4 +317,18 @@ void HexEditor::setBinaryData(QByteArray data) {
     binaryData = StructureByteArray(data);
     model->updateData();
     resizeTable();
+}
+
+void HexEditor::goToAddress(unsigned int address) {
+    if (binaryData.isEmpty()) {
+        return;
+    }
+    if (address >= static_cast<unsigned int>(binaryData.size())) {
+        address = static_cast<unsigned int>(binaryData.size()) - 1;
+    }
+    int row = static_cast<int>(address / static_cast<unsigned int>(columnCount));
+    int col = static_cast<int>(address % static_cast<unsigned int>(columnCount)) + 1;
+    ui->hexEditor->selectionModel()->setCurrentIndex(model->index(row, col),
+                                                     QItemSelectionModel::Current | QItemSelectionModel::Select);
+
 }

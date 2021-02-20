@@ -1,3 +1,4 @@
+#include "gotodialog.h"
 #include "hexeditorwindow.h"
 #include "palettedialog.h"
 #include "ui_hexeditorwindow.h"
@@ -537,5 +538,17 @@ void HexEditorWindow::on_hexSourceBox_activated(int index) {
         QString fullName = structureNamedItems.at(index).fullName;
         JsonStoredData *data = ui->structureEditor->getStoredDataByName(fullName);
         ui->hexSizeValue->setText(QString("%1").arg(data->getSize()));
+    }
+}
+
+void HexEditorWindow::on_actionGo_to_address_triggered() {
+    GoToDialog dlg;
+    if (dlg.exec()) {
+        unsigned int address = dlg.getValue();
+        if (ui->tabWidget->currentIndex() != 3) {
+            ui->leftFilePanel->goToAddress(address);
+        } else {
+            ui->hexPreviewPanel->goToAddress(address);
+        }
     }
 }

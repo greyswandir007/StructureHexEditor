@@ -52,10 +52,9 @@ private slots:
     void on_imageSaveRawButton_clicked();
     void on_actionApply_Structure_triggered();
     void on_actionFormat_Structure_triggered();
-
     void on_hexPreviewButton_clicked();
-
     void on_hexSourceBox_activated(int index);
+    void on_actionGo_to_address_triggered();
 
 private:
     static const int MAX_OFFSET = 10000000;
