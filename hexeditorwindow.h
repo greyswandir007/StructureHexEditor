@@ -53,8 +53,17 @@ private slots:
     void on_actionApply_Structure_triggered();
     void on_actionFormat_Structure_triggered();
 
+    void on_hexPreviewButton_clicked();
+
+    void on_hexSourceBox_activated(int index);
+
 private:
     static const int MAX_OFFSET = 10000000;
+
+    void loadSetting();
+    void saveSettings();
+    void addSource(QString fullName, QString displayName);
+    void clearSources();
 
     int execOffsetDialog(QString header, int size, int *value);
     void copyData(HexEditor *from, HexEditor *to);

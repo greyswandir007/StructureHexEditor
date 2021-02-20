@@ -312,3 +312,9 @@ StructureByteArray HexEditor::getBinaryDataByIndex(const QModelIndex &index, int
 StructureByteArray HexEditor::getBinaryDataByIndex(int offset, int length) {
     return binaryData.mid(offset, length);
 }
+
+void HexEditor::setBinaryData(QByteArray data) {
+    binaryData = StructureByteArray(data);
+    model->updateData();
+    resizeTable();
+}

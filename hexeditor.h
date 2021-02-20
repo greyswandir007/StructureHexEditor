@@ -60,6 +60,8 @@ public:
     StructureByteArray getBinaryDataByIndex(const QModelIndex &index, int length);
     StructureByteArray getBinaryDataByIndex(int offset, int length);
 
+    void setBinaryData(QByteArray data);
+
 signals:
 
 public slots:
