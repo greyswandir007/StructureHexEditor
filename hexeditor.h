@@ -62,6 +62,7 @@ public:
 
     void setBinaryData(QByteArray data);
     void goToAddress(unsigned int address);
+    void findSequence(StructureByteArray sequence, bool continueSearch = false);
 
 signals:
 

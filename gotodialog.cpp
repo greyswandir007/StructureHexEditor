@@ -12,5 +12,5 @@ GoToDialog::~GoToDialog() {
 }
 
 unsigned int GoToDialog::getValue() {
-    return ui->addressValueSpin->value();
+    return static_cast<unsigned int>(ui->addressValueSpin->value());
 }

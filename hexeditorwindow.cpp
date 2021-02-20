@@ -1,3 +1,4 @@
+#include "finddialog.h"
 #include "gotodialog.h"
 #include "hexeditorwindow.h"
 #include "palettedialog.h"
@@ -549,6 +550,28 @@ void HexEditorWindow::on_actionGo_to_address_triggered() {
             ui->leftFilePanel->goToAddress(address);
         } else {
             ui->hexPreviewPanel->goToAddress(address);
+        }
+    }
+}
+
+void HexEditorWindow::on_actionFind_triggered() {
+    FindDialog dlg;
+    if (dlg.exec()) {
+        lastSearchValue = dlg.getSearchValue();
+        if (ui->tabWidget->currentIndex() != 3) {
+            ui->leftFilePanel->findSequence(lastSearchValue, dlg.continueSearch());
+        } else {
+            ui->hexPreviewPanel->findSequence(lastSearchValue, dlg.continueSearch());
+        }
+    }
+}
+
+void HexEditorWindow::on_actionFind_next_triggered() {
+    if (!lastSearchValue.isEmpty()) {
+        if (ui->tabWidget->currentIndex() != 3) {
+            ui->leftFilePanel->findSequence(lastSearchValue, true);
+        } else {
+            ui->hexPreviewPanel->findSequence(lastSearchValue, true);
         }
     }
 }

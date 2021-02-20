@@ -332,3 +332,18 @@ void HexEditor::goToAddress(unsigned int address) {
                                                      QItemSelectionModel::Current | QItemSelectionModel::Select);
 
 }
+
+void HexEditor::findSequence(StructureByteArray sequence, bool continueSearch) {
+    if (binaryData.isEmpty()) {
+        return;
+    }
+    int address = -1;
+    if (continueSearch) {
+        address = binaryData.indexOf(sequence, static_cast<int>(getCurrentAddress()) + 1);
+    } else {
+        address = binaryData.indexOf(sequence);
+    }
+    if (address >= 0) {
+        goToAddress(static_cast<unsigned int>(address));
+    }
+}

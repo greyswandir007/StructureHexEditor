@@ -3,6 +3,8 @@
 
 #include <QMainWindow>
 
+#include <components/structurebytearray.h>
+
 #include "components/jsonhighlighter.h"
 #include "components/structurenameditem.h"
 
@@ -11,7 +13,6 @@ class HexEditorWindow;
 }
 
 class HexEditor;
-class StructureByteArray;
 
 class HexEditorWindow : public QMainWindow {
     Q_OBJECT
@@ -55,6 +56,9 @@ private slots:
     void on_hexPreviewButton_clicked();
     void on_hexSourceBox_activated(int index);
     void on_actionGo_to_address_triggered();
+    void on_actionFind_triggered();
+
+    void on_actionFind_next_triggered();
 
 private:
     static const int MAX_OFFSET = 10000000;
@@ -73,7 +77,7 @@ private:
 
     Ui::HexEditorWindow *ui;
     QString lastDirectory;
-    QString structureFilename = "";
+    QString structureFilename;
     QStringList recentFilePaths;
     QStringList recentStructurePaths;
     unsigned int *currentPalette;
@@ -81,6 +85,8 @@ private:
     QList<StructureNamedItem> structureNamedItems;
 
     JsonHighlighter *highlighter = nullptr;
+
+    StructureByteArray lastSearchValue;
 };
 
 #endif // HEXEDITORWINDOW_H
