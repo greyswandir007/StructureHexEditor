@@ -52,13 +52,17 @@ public:
     void setCompareData(StructureByteArray *compareData);
     StructureByteArray *getCompareData();
 
-    unsigned int getColumnCount() const;
-    void setColumnCount(unsigned int value);
+    int getColumnCount() const;
+    void setColumnCount(int value);
     int getResizeMode() const;
     void setResizeMode(int value);
 
     StructureByteArray getBinaryDataByIndex(const QModelIndex &index, int length);
     StructureByteArray getBinaryDataByIndex(int offset, int length);
+
+    void setBinaryData(QByteArray data);
+    void goToAddress(unsigned int address);
+    void findSequence(StructureByteArray sequence, bool continueSearch = false);
 
 signals:
 
@@ -75,7 +79,7 @@ private:
     bool exported;
     StructureByteArray binaryData;
     StructureByteArray *compareData;
-    unsigned int columnCount;
+    int columnCount;
     int resizeMode;
     QString filename;
     int charWidth;

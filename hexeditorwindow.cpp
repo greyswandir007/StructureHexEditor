@@ -1,3 +1,5 @@
+#include "finddialog.h"
+#include "gotodialog.h"
 #include "hexeditorwindow.h"
 #include "palettedialog.h"
 #include "ui_hexeditorwindow.h"
@@ -33,24 +35,7 @@ HexEditorWindow::HexEditorWindow(QWidget *parent) :
     connect(ui->rightFilePanel->selectionModel(), SIGNAL(currentChanged(const QModelIndex&,const QModelIndex&)),
             this, SLOT(syncEdit2to1(const QModelIndex&,const QModelIndex&)));
 
-    QSettings settings("StructureHexEditor", "StructureHexEditor");
-    settings.sync();
-    int size = settings.beginReadArray("recentOpenedFiles");
-    for (int i = 0; i < size; i++) {
-        settings.setArrayIndex(i);
-        QString filename = settings.value("filePath").toString();
-        if (!filename.isEmpty()) {
-            addRecentOpenedFile(filename);
-        }
-    }
-    size = settings.beginReadArray("recentStructureFiles");
-    for (int i = 0; i < size; i++) {
-        settings.setArrayIndex(i);
-        QString filename = settings.value("filePath").toString();
-        if (!filename.isEmpty()) {
-            addRecentStructureFile(filename);
-        }
-    }
+    loadSetting();
     unsigned int *pal = PaletteDialog::getDefaultPalette();
     currentPalette = new unsigned int[256];
     for (int i = 0; i < 256; i++) {
@@ -61,19 +46,7 @@ HexEditorWindow::HexEditorWindow(QWidget *parent) :
 }
 
 HexEditorWindow::~HexEditorWindow() {
-    QSettings settings("StructureHexEditor", "StructureHexEditor");
-    settings.sync();
-    settings.beginWriteArray("recentOpenedFiles", recentFilePaths.size());
-    for (int i = 0; i < recentFilePaths.size(); i++) {
-        settings.setArrayIndex(i);
-        settings.setValue("filePath", recentFilePaths.at(i));
-    }
-    settings.beginWriteArray("recentStructureFiles", recentStructurePaths.size());
-    for (int i = 0; i < recentStructurePaths.size(); i++) {
-        settings.setArrayIndex(i);
-        settings.setValue("filePath", recentStructurePaths.at(i));
-    }
-    settings.sync();
+    saveSettings();
     delete ui;
     delete highlighter;
 }
@@ -87,10 +60,7 @@ void HexEditorWindow::on_actionOpen_triggered() {
     QStringList files = QFileDialog::getOpenFileNames(this, tr("Select files"), lastDirectory, "*.*", nullptr,
                                                       QFileDialog::DontUseNativeDialog);
     switch(files.size()) {
-        case 0: {
-            qDebug() << "No files selected";
-            return;
-        }
+        case 0: break;
         case 1: {
             addRecentOpenedFile(files.at(0));
             lastDirectory = QFileInfo(files.at(0)).absolutePath();
@@ -100,20 +70,9 @@ void HexEditorWindow::on_actionOpen_triggered() {
             addRecentOpenedFile(files.at(0));
             addRecentOpenedFile(files.at(1));
             lastDirectory = QFileInfo(files.at(0)).absolutePath();
-            ui->structureEditor->clearStructure();
-            ui->imageSourceBox->clear();
-            ui->imageSourceBox->addItem("File 1");
-            ui->imageSourceBox->addItem("File 2");
-            ui->imageSourceBox->setCurrentIndex(0);
-            structureNamedItems.clear();
-            StructureNamedItem item1;
-            item1.fullName = "";
-            item1.displayName = "File 1";
-            structureNamedItems.append(item1);
-            StructureNamedItem item2;
-            item2.fullName = "";
-            item2.displayName = "File 1";
-            structureNamedItems.append(item2);
+            clearSources();
+            addSource("", "File 1");
+            addSource("", "File 2");
 
             ui->leftFilePanel->loadFile(files.at(0));
             ui->rightFilePanel->loadFile(files.at(1));
@@ -302,14 +261,8 @@ void HexEditorWindow::addRecentStructureFile(QString filename) {
 }
 
 void HexEditorWindow::openHexFile(QString filename) {
-    ui->imageSourceBox->clear();
-    ui->imageSourceBox->addItem("File");
-    ui->imageSourceBox->setCurrentIndex(0);
-    structureNamedItems.clear();
-    StructureNamedItem item;
-    item.fullName = "";
-    item.displayName = "File";
-    structureNamedItems.append(item);
+    clearSources();
+    addSource("", "File");
     ui->structureEditor->clearStructure();
     ui->leftFilePanel->loadFile(filename);
     ui->rightFilePanel->hide();
@@ -426,34 +379,16 @@ void HexEditorWindow::on_applyStructureButton_clicked() {
     QList<JsonStoredData *> list = ui->structureEditor->getBinaryList();
     if (ui->imageSourceBox->count() > 1) {
         if (ui->imageSourceBox->itemText(1).compare("File 2") == 0) {
-            ui->imageSourceBox->clear();
-            ui->imageSourceBox->addItem("File 1");
-            ui->imageSourceBox->addItem("File 2");
-            structureNamedItems.clear();
-            StructureNamedItem item1;
-            item1.fullName = "";
-            item1.displayName = "File 1";
-            structureNamedItems.append(item1);
-            StructureNamedItem item2;
-            item2.fullName = "";
-            item2.displayName = "File 1";
-            structureNamedItems.append(item2);
+            clearSources();
+            addSource("", "File 1");
+            addSource("", "File 2");
         } else {
-            ui->imageSourceBox->clear();
-            ui->imageSourceBox->addItem("File");
-            structureNamedItems.clear();
-            StructureNamedItem item;
-            item.fullName = "";
-            item.displayName = "File";
-            structureNamedItems.append(item);
+            clearSources();
+            addSource("", "File");
         }
     }
     for (auto item : list) {
-        StructureNamedItem stItem;
-        stItem.fullName = item->getFullName();
-        stItem.displayName = item->getDisplayName().isEmpty() ? item->getFullName() : item->getDisplayName();
-        structureNamedItems.append(stItem);
-        ui->imageSourceBox->addItem(item->getDisplayName());
+        addSource(item->getFullName(), item->getDisplayName().isEmpty() ? item->getFullName() : item->getDisplayName());
     }
 }
 
@@ -525,4 +460,118 @@ void HexEditorWindow::on_actionApply_Structure_triggered() {
 
 void HexEditorWindow::on_actionFormat_Structure_triggered() {
     on_formatStructureButton_clicked();
+}
+
+void HexEditorWindow::loadSetting() {
+    QSettings settings("StructureHexEditor", "StructureHexEditor");
+    settings.sync();
+    int size = settings.beginReadArray("recentOpenedFiles");
+    for (int i = 0; i < size; i++) {
+        settings.setArrayIndex(i);
+        QString filename = settings.value("filePath").toString();
+        if (!filename.isEmpty()) {
+            addRecentOpenedFile(filename);
+        }
+    }
+    size = settings.beginReadArray("recentStructureFiles");
+    for (int i = 0; i < size; i++) {
+        settings.setArrayIndex(i);
+        QString filename = settings.value("filePath").toString();
+        if (!filename.isEmpty()) {
+            addRecentStructureFile(filename);
+        }
+    }
+}
+
+void HexEditorWindow::saveSettings() {
+    QSettings settings("StructureHexEditor", "StructureHexEditor");
+    settings.sync();
+    settings.beginWriteArray("recentOpenedFiles", recentFilePaths.size());
+    for (int i = 0; i < recentFilePaths.size(); i++) {
+        settings.setArrayIndex(i);
+        settings.setValue("filePath", recentFilePaths.at(i));
+    }
+    settings.beginWriteArray("recentStructureFiles", recentStructurePaths.size());
+    for (int i = 0; i < recentStructurePaths.size(); i++) {
+        settings.setArrayIndex(i);
+        settings.setValue("filePath", recentStructurePaths.at(i));
+    }
+    settings.sync();
+}
+
+void HexEditorWindow::addSource(QString fullName, QString displayName) {
+    ui->imageSourceBox->addItem(displayName);
+    ui->hexSourceBox->addItem(displayName);
+    StructureNamedItem item;
+    item.fullName = fullName;
+    item.displayName = displayName;
+    structureNamedItems.append(item);
+}
+
+void HexEditorWindow::clearSources() {
+    ui->imageSourceBox->setCurrentIndex(0);
+    ui->hexSourceBox->setCurrentIndex(0);
+    ui->imageSourceBox->clear();
+    ui->hexSourceBox->clear();
+    structureNamedItems.clear();
+}
+
+void HexEditorWindow::on_hexPreviewButton_clicked() {
+    if (ui->hexSourceBox->currentText().compare("File") == 0
+            || ui->hexSourceBox->currentText().compare("File 1") == 0) {
+        ui->hexPreviewPanel->setBinaryData(ui->leftFilePanel->getBinaryData()[0]);
+    } else if (ui->hexSourceBox->currentText().compare("File 2") == 0) {
+        ui->hexPreviewPanel->setBinaryData(ui->rightFilePanel->getBinaryData()[0]);
+    } else {
+        QString fullName = structureNamedItems.at(ui->hexSourceBox->currentIndex()).fullName;
+        JsonStoredData *data = ui->structureEditor->getStoredDataByName(fullName);
+        ui->hexPreviewPanel->setBinaryData(data->getValue().toByteArray());
+    }
+}
+
+void HexEditorWindow::on_hexSourceBox_activated(int index) {
+    if (ui->hexSourceBox->currentText().compare("File") == 0
+            || ui->hexSourceBox->currentText().compare("File 1") == 0) {
+        ui->hexSizeValue->setText(QString("%1").arg(ui->leftFilePanel->getBinaryData()->size()));
+    } else if (ui->hexSourceBox->currentText().compare("File 2") == 0) {
+        ui->hexSizeValue->setText(QString("%1").arg(ui->rightFilePanel->getBinaryData()->size()));
+    } else {
+        QString fullName = structureNamedItems.at(index).fullName;
+        JsonStoredData *data = ui->structureEditor->getStoredDataByName(fullName);
+        ui->hexSizeValue->setText(QString("%1").arg(data->getSize()));
+    }
+}
+
+void HexEditorWindow::on_actionGo_to_address_triggered() {
+    GoToDialog dlg;
+    if (dlg.exec()) {
+        unsigned int address = dlg.getValue();
+        if (ui->tabWidget->currentIndex() != 3) {
+            ui->leftFilePanel->goToAddress(address);
+        } else {
+            ui->hexPreviewPanel->goToAddress(address);
+        }
+    }
+}
+
+void HexEditorWindow::on_actionFind_triggered() {
+    FindDialog dlg;
+    if (dlg.exec()) {
+        lastSearchValue = dlg.getSearchValue();
+        if (ui->tabWidget->currentIndex() != 3) {
+            ui->leftFilePanel->findSequence(lastSearchValue, dlg.continueSearch());
+        } else {
+            ui->hexPreviewPanel->findSequence(lastSearchValue, dlg.continueSearch());
+        }
+    }
+}
+
+void HexEditorWindow::on_actionFind_next_triggered() {
+    if (!lastSearchValue.isEmpty()) {
+        if (ui->tabWidget->currentIndex() != 3) {
+            ui->leftFilePanel->findSequence(lastSearchValue, true);
+        } else {
+            ui->hexPreviewPanel->findSequence(lastSearchValue, true);
+        }
+    }
 }

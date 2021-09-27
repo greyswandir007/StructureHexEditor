@@ -40,7 +40,9 @@ SOURCES += \
     components/jsonstoreddatahelper.cpp \
     components/mainview.cpp \
     palettedialog.cpp \
-    components/jsonhighlighter.cpp
+    components/jsonhighlighter.cpp \
+    gotodialog.cpp \
+    finddialog.cpp
 
 HEADERS += \
         hexeditorwindow.h \
@@ -59,14 +61,18 @@ HEADERS += \
     palettedialog.h \
     components/imagepreviewparams.h \
     components/structurenameditem.h \
-    components/jsonhighlighter.h
+    components/jsonhighlighter.h \
+    gotodialog.h \
+    finddialog.h
 
 FORMS += \
         hexeditorwindow.ui \
     hexeditor.ui \
     components/propertiesdialog.ui \
     structureeditor.ui \
-    palettedialog.ui
+    palettedialog.ui \
+    gotodialog.ui \
+    finddialog.ui
 
 # Default rules for deployment.
 qnx: target.path = /tmp/$${TARGET}/bin
